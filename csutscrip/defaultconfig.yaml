@@ -1,0 +1,64 @@
+tof_cfg:
+    ch: 0
+    pulse_freq: 4500 #MHz
+    pulse_gain: 0
+    pulse_style: const
+    pulse_phase: 0
+    length: 100
+    nqz: 2
+    
+# #######################
+channel_cfg:
+    resonator: 0
+    Q1: 4
+    Q2: 6
+    Q3: 5
+    Q4: 2
+    fastflux: 1
+
+# #######################
+resonator_cfg:
+    f_res: 5000 #MHz
+    res_gain: 0
+    res_phase: 0
+    res_nqz: 2
+
+# #######################
+qubit_cfg:
+    f_ge: 4100 #MHz
+    ge_gain: 0
+    gepulse_length: 100
+    ge_pigain: 0
+    ge_pi2gain: 0
+    ge_nqz: 2
+    f_ef: 3000 #MHz
+    efpulse_length: 100
+    ef_gain: 0
+    ef_pigainl: 0
+    ef_pi2gain: 0
+    ef_nqz: 2
+
+# #######################
+adc_cfg:
+    ro_ch:
+      - 0
+      - 1
+    readout_length: 100
+    relax_delay: 0
+    adc_trig_offset: 150
+
+soft_avgs: 1
+reps: 1
+round: 1
+# #######################
+instrument_status:
+    yokogawa: 0
+    sgs1000a: 
+        frequency: 0
+        power: 0 #dBm
+        
+# #######################
+measure_result:
+    T1: 5   #us
+    T2 Ramsey: 5    #us
+    T2 Echo: 5  #us
