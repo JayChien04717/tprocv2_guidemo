@@ -1,16 +1,16 @@
 import streamlit as st
-from single_qubit_pyscrip.system_tool import select_config_idx, saveh5, get_next_filename
+from single_qubit_pyscrip.system_tool import select_config_idx, saveshot, get_next_filename
 import single_qubit_pyscrip.fitting as fitter
-from single_qubit_pyscrip.SQ002_res_spec_ge import SingleToneSpectroscopyProgram
+from single_qubit_pyscrip.SQ000_SingleShot_prog import SingleShotProgram_g, SingleShotProgram_e
 from qick.asm_v2 import QickSpan, QickSweep1D
 import matplotlib.pyplot as plt
 import numpy as np
 import datetime
 
-st.title("Resonator OneTone Spectroscopy")
+st.title("Single Shot ge")
 
 # ----- Experiment Configurations ----- #
-st.session_state.expt_name = "002_onetone"
+st.session_state.expt_name = "000_SingleShot"
 Qubit = 'Q' + str(st.session_state.QubitIndex)
 
 # Merge all configurations into one dictionary
@@ -23,44 +23,42 @@ st.session_state.config = select_config_idx(
 )
 
 # Ensure session state variables exist
-for key in ["onetone", "config", "onetone_fig", "fig"]:
+for key in ["singleshot", "config", "singleshot_fig", "fig"]:
     if key not in st.session_state:
         st.session_state[key] = None
 
 
-class ResonatorOnetone:
+class SingleShot_ge:
     def __init__(self, soccfg, cfg):
         self.soccfg = soccfg
         self.cfg = cfg
-        self.iq_list = None
-        self.freqs = None
 
-    def run(self, reps):
-        prog = SingleToneSpectroscopyProgram(
-            self.soccfg, reps=reps, final_delay=self.cfg['relax_delay'], cfg=self.cfg)
-        py_avg = self.cfg['py_avg']
-        self.iq_list = prog.acquire(st.session_state.soc, soft_avgs=py_avg)
-        self.freqs = prog.get_pulse_param("res_pulse", "freq", as_array=True)
+    def run(self, shot_f=False):
+        shot_g = SingleShotProgram_g(
+            self.soccfg, reps=1, final_delay=self.cfg['relax_delay'], cfg=self.cfg)
+        shot_e = SingleShotProgram_e(
+            self.soccfg, reps=1, final_delay=self.cfg['relax_delay'], cfg=self.cfg)
+
+        self.iq_list_g = shot_g.acquire(
+            st.session_state.soc, soft_avgs=1, progress=True)
+        self.iq_list_e = shot_e.acquire(
+            st.session_state.soc, soft_avgs=1, progress=True)
+
+        I_g = self.iq_list_g[0][0].T[0]
+        Q_g = self.iq_list_g[0][0].T[1]
+        I_e = self.iq_list_e[0][0].T[0]
+        Q_e = self.iq_list_e[0][0].T[1]
+
+        self.data = {'Ig': I_g, 'Qg': Q_g,
+                     'Ie': I_e, 'Qe': Q_e}
 
     def plot(self, fit=False):
+        from single_qubit_pyscrip.system_shotplot import gui_hist
         plt.rcParams.update({'font.size': 14})
-        if self.iq_list is not None:
-            fig, ax = plt.subplots(figsize=(12, 5))
-            ax.plot(self.freqs, np.abs(
-                self.iq_list[0][0].dot([1, 1j])), label="Magnitude", marker='o', markersize=5)
-            ax.set_xlabel("Frequency (MHz)")
-            ax.set_ylabel("ADC unit (a.u)")
-            ax.set_title("Resonator OneTone Spectroscopy")
-            ax.legend()
-            if fit:
-                pOpt, pCov = fitter.fit_asym_lor(
-                    self.freqs, np.abs(self.iq_list[0][0].dot([1, 1j])))
-                resonacefreq = pOpt[2]
-                ax.plot(self.freqs, fitter.asym_lorfunc(
-                    self.freqs, *pOpt), label=f"Fit res freq = {resonacefreq:.0f}MHz")
-                ax.legend()
-            # Save to session state
-            st.session_state.onetone_fig = fig
+        if self.iq_list_g is not None:
+            fig, ax = plt.subplots(figsize=(14, 7))
+            fig = gui_hist(self.data)
+            st.session_state.singleshot_fig = fig
             st.session_state.timetag = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         else:
             st.warning("No data to plot. Please run the experiment first.")
@@ -74,34 +72,29 @@ class ResonatorOnetone:
         st.write(f'Current data file: {file_path}')
 
         data_dict = {
-            "experiment_name": "res_spec_ge",
-            "x_name": "Frequency (MHz)",
-            "x_value": self.freqs,
-            "z_name": "ADC unit (a.u)",
-            "z_value": self.iq_list[0][0].dot([1, 1j])
+            "experiment_name": "singleshot",
         }
+        data_dict.update(self.data)
         result_dict = {"notes": str(
             st.session_state.get("experiment_notes", ""))}
-        saveh5(file_path, data_dict, result=result_dict)
+
+        saveshot(file_path, data_dict, result=result_dict)
 
 
-col1, col2, col3 = st.columns(3)
-with col1:
-    start_freq = st.number_input(
-        "Start Frequency (MHz)", min_value=0, value=4000, step=1)
-with col2:
-    stop_freq = st.number_input(
-        "Stop Frequency (MHz)", min_value=start_freq, value=5000, step=1)
-with col3:
-    steps = st.number_input("Steps:", min_value=1,
-                            max_value=1000, value=101, step=1)
+Shots = st.number_input(" \# of shots:", min_value=1,
+                        max_value=50000, value=5000, step=1)
 
-st.session_state.config.update(
-    [('steps', steps), ('res_freq_ge', QickSweep1D('freqloop', start_freq, stop_freq))])
+st.session_state.config.update([('shots', Shots)])
 
 # **Soft Average Configuration**
+
 pyavg = st.number_input("Soft average #:", min_value=1,
                         max_value=10000, value=10, step=1)
+
+relax_delay = st.number_input("relaxatoin time (us):", min_value=1,
+                              max_value=1000, value=10, step=1)
+
+st.session_state.config['relax_delay'] = relax_delay
 st.session_state.config['py_avg'] = pyavg
 
 ######################################
@@ -158,22 +151,24 @@ fit_checkbox = st.checkbox(
     "Fit Data", value=st.session_state.get("fit_checkbox", False))
 st.session_state.fit_checkbox = fit_checkbox
 
+
 if st.button("Run"):
-    st.session_state.onetone = ResonatorOnetone(
+    st.session_state.singleshot = SingleShot_ge(
         st.session_state.soccfg, st.session_state.config)
-    st.session_state.onetone.run(reps=st.session_state.config['reps'])
+    st.session_state.singleshot.run()
     st.success("Experiment completed!")
-    st.session_state.onetone.plot(fit=st.session_state.fit_checkbox)
+    st.session_state.singleshot.plot()
 
+if "singleshot" in st.session_state and st.session_state.singleshot:
 
-if "onetone" in st.session_state and st.session_state.onetone:
-    st.session_state.onetone.plot(fit=st.session_state.fit_checkbox)
-    if st.session_state.onetone_fig:
+    st.session_state.singleshot.plot()
+
+    if st.session_state.singleshot_fig:
         st.write(f"### Last Measurement Time: {st.session_state.timetag}")
-        st.pyplot(st.session_state.onetone_fig)
+        st.pyplot(st.session_state.singleshot_fig)
 
     st.session_state.experiment_notes = st.text_area(
         "Experiment Notes", placeholder="Note or results...")
     if st.button("Save"):
-        st.session_state.onetone.save()
+        st.session_state.singleshot.save()
         st.success("Data saved successfully!")

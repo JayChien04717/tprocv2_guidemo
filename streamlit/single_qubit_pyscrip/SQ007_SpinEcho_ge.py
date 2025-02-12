@@ -1,25 +1,8 @@
-# %%
 # ----- Qick package ----- #
 from qick import *
 from qick.pyro import make_proxy
-# for now, all the tProc v2 classes need to be individually imported (can't use qick.*)
-# the main program class
 from qick.asm_v2 import AveragerProgramV2
-# for defining sweeps
 from qick.asm_v2 import QickSpan, QickSweep1D
-# ----- Library ----- #
-import matplotlib.pyplot as plt
-import numpy as np
-import datetime
-from system_cfg import *
-from system_tool import select_config_idx, saveh5, get_next_filename
-from pprint import pprint
-# ----- Experiment configurations ----- #
-expt_name = "006_Ramsey_ge"
-QubitIndex = 2
-Qubit = 'Q' + str(QubitIndex)
-config = select_config_idx(
-    hw_cfg, readout_cfg, qubit_cfg, expt_cfg, idx=QubitIndex)
 
 
 ##################
@@ -76,7 +59,7 @@ class SpinEchoProgram(AveragerProgramV2):
                        envelope="ramp",
                        freq=cfg['qubit_freq_ge'],
                        # current phase + time * 2pi * ramsey freq
-                       phase=cfg['qubit_phase'] + \
+                       phase=cfg['qubit_phase'] +
                        cfg['wait_time']*360*cfg['ramsey_freq'],
                        gain=cfg['qubit_gain_ge'] / 2,
                        )
@@ -91,65 +74,3 @@ class SpinEchoProgram(AveragerProgramV2):
         self.delay_auto(0.01)
         self.pulse(ch=cfg['res_ch'], name="res_pulse", t=0)
         self.trigger(ros=[cfg['ro_ch']], pins=[0], t=cfg['trig_time'])
-
-
-###################
-# Experiment sweep parameter
-###################
-
-START_TIME = 0.0  # [us]
-STOP_TIME = 100  # [us]
-STEPS = 100
-config.update([('steps', STEPS), ('wait_time',
-              QickSweep1D('waitloop', START_TIME, STOP_TIME))])
-
-###################
-# Run the Program
-###################
-
-se = SpinEchoProgram(
-    soccfg, reps=100, final_delay=config['relax_delay'], cfg=config)
-py_avg = 10
-iq_list = se.acquire(soc, soft_avgs=py_avg, progress=True)
-delay_times = se.get_time_param('wait', "t", as_array=True)
-amps = np.abs(iq_list[0][0].dot([1, 1j]))
-
-###################
-# Plot
-###################
-
-Plot = True
-
-if Plot:
-    # plt.plot(freqs,  iq_list[0][0].T[0])
-    # plt.plot(freqs,  iq_list[0][0].T[1])
-    plt.plot(delay_times, iq_list[0][0].dot([1, 1j]))
-    plt.show()
-
-#####################################
-# ----- Saves data to a file ----- #
-#####################################
-
-Save = True
-if Save:
-    data_path = "./data"
-    labber_data = "./data/Labber"
-    exp_name = expt_name + '_Q' + str(QubitIndex)
-    print('Experiment name: ' + exp_name)
-    file_path = get_next_filename(data_path, exp_name, suffix='.h5')
-    print('Current data file: ' + file_path)
-
-    data_dict = {
-        "x_name": "Ramsey time(us)",
-        "x_value": delay_times*2,
-
-        "z_name": "iq_list",
-        "z_value": iq_list[0][0].dot([1, 1j])
-    }
-
-    result = {
-        "T1": "350us",
-        "T2": "130us"
-    }
-
-    saveh5(file_path, data_dict, result)

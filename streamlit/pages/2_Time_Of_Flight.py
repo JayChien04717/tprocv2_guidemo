@@ -42,6 +42,7 @@ class TOF:
         self.t = prog.get_time_axis(ro_index=0)
 
     def plot(self):
+        plt.rcParams.update({'font.size': 14})
         if self.iq_list is not None:
             fig, ax = plt.subplots()
             ax.plot(self.t, self.iq_list[0].T[0], label="I")

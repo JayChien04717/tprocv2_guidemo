@@ -1,25 +1,8 @@
-# %%
 # ----- Qick package ----- #
 from qick import *
 from qick.pyro import make_proxy
-# for now, all the tProc v2 classes need to be individually imported (can't use qick.*)
-# the main program class
 from qick.asm_v2 import AveragerProgramV2
-# for defining sweeps
 from qick.asm_v2 import QickSpan, QickSweep1D
-# ----- Library ----- #
-import matplotlib.pyplot as plt
-import numpy as np
-import datetime
-from system_cfg import *
-from system_tool import select_config_idx, saveh5, get_next_filename
-from pprint import pprint
-# ----- Experiment configurations ----- #
-expt_name = "005_power_rabi_ge"
-QubitIndex = 2
-Qubit = 'Q' + str(QubitIndex)
-config = select_config_idx(
-    hw_cfg, readout_cfg, qubit_cfg, expt_cfg, idx=QubitIndex)
 
 
 ##################
@@ -71,66 +54,3 @@ class AmplitudeRabiProgram(AveragerProgramV2):
 
         self.pulse(ch=cfg['res_ch'], name="res_pulse", t=0)
         self.trigger(ros=[cfg['ro_ch']], pins=[0], t=cfg['trig_time'])
-
-
-###################
-# Experiment sweep parameter
-###################
-
-START_GAIN = 0.0  # [DAC units]
-STOP_GAIN = 0.5  # [DAC units]
-STEPS = 200
-config.update([('steps', STEPS), ('qubit_gain_ge',
-              QickSweep1D('gainloop', START_GAIN, STOP_GAIN))])
-
-###################
-# Run the Program
-###################
-
-amp_rabi = AmplitudeRabiProgram(
-    soccfg, reps=10, final_delay=config['relax_delay'], cfg=config)
-py_avg = config['py_avg']
-
-iq_list = np.array(amp_rabi.acquire(soc, soft_avgs=py_avg, progress=True))
-gains = amp_rabi.get_pulse_param('qubit_pulse', "gain", as_array=True)
-
-
-###################
-# Plot
-###################
-
-Plot = True
-
-if Plot:
-    # plt.plot(freqs,  iq_list[0][0].T[0])
-    # plt.plot(freqs,  iq_list[0][0].T[1])
-    plt.plot(gains, iq_list[0][0].dot([1, 1j]))
-    plt.show()
-
-#####################################
-# ----- Saves data to a file ----- #
-#####################################
-
-Save = True
-if Save:
-    data_path = "./data"
-    labber_data = "./data/Labber"
-    exp_name = expt_name + '_Q' + str(QubitIndex)
-    print('Experiment name: ' + exp_name)
-    file_path = get_next_filename(data_path, exp_name, suffix='.h5')
-    print('Current data file: ' + file_path)
-
-    data_dict = {
-        "x_name": "Gain(a.u)",
-        "x_value": gains,
-
-        "z_name": "iq_list",
-        "z_value": iq_list[0][0].dot([1, 1j])
-    }
-
-    result = {
-        "T1": "350us",
-        "T2": "130us"
-    }
-
-    saveh5(file_path, data_dict, result)

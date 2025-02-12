@@ -1,26 +1,9 @@
-# %%
 # ----- Qick package ----- #
 from qick import *
 from qick.pyro import make_proxy
-# for now, all the tProc v2 classes need to be individually imported (can't use qick.*)
-# the main program class
 from qick.asm_v2 import AveragerProgramV2
-# for defining sweeps
+
 from qick.asm_v2 import QickSpan, QickSweep1D
-# ----- Library ----- #
-import matplotlib.pyplot as plt
-import numpy as np
-import datetime
-from singleshotplot import hist
-from system_cfg import *
-from system_tool import select_config_idx, saveshot, get_next_filename
-from pprint import pprint
-# ----- Experiment configurations ----- #
-expt_name = "000_SingleShot_gef"
-QubitIndex = 0
-Qubit = 'Q' + str(QubitIndex)
-config = select_config_idx(
-    hw_cfg, readout_cfg, qubit_cfg, expt_cfg, idx=QubitIndex)
 
 
 ##################
@@ -166,84 +149,3 @@ class SingleShotProgram_f(AveragerProgramV2):
         self.delay_auto(0.01)
         self.pulse(ch=cfg['res_ch'], name="res_pulse", t=0)
         self.trigger(ros=[cfg['ro_ch']], pins=[0], t=cfg['trig_time'])
-
-
-class SingleShot_gef:
-    def __init__(self, soccfg, cfg):
-        self.soccfg = soccfg
-        self.cfg = cfg
-
-    def run(self, shot_f=False):
-        shot_g = SingleShotProgram_g(
-            soccfg, reps=1, final_delay=self.cfg['relax_delay'], cfg=self.cfg)
-        shot_e = SingleShotProgram_e(
-            soccfg, reps=1, final_delay=self.cfg['relax_delay'], cfg=self.cfg)
-
-        iq_list_g = shot_g.acquire(soc, soft_avgs=1, progress=True)
-        iq_list_e = shot_e.acquire(soc, soft_avgs=1, progress=True)
-
-        I_g = iq_list_g[0][0].T[0]
-        Q_g = iq_list_g[0][0].T[1]
-        I_e = iq_list_e[0][0].T[0]
-        Q_e = iq_list_e[0][0].T[1]
-        if shot_f:
-            shot_f = SingleShotProgram_f(
-                soccfg, reps=1, final_delay=self.cfg['relax_delay'], cfg=self.cfg)
-            iq_list_f = shot_f.acquire(soc, soft_avgs=1, progress=True)
-            I_f = iq_list_f[0][0].T[0]
-            Q_f = iq_list_f[0][0].T[1]
-
-        if shot_f:
-            self.data = {'Ig': I_g, 'Qg': Q_g,
-                         'Ie': I_e, 'Qe': Q_e,
-                         'If': I_f, 'Qf': Q_f, }
-        else:
-            self.data = {'Ig': I_g, 'Qg': Q_g,
-                         'Ie': I_e, 'Qe': Q_e}
-
-    def plot(self, fid_avg=False, fit=False, normalize=False):
-        hist(
-            self.data,
-            amplitude_mode=False,
-            ps_threshold=None,
-            theta=None,
-            plot=True,
-            verbose=True,
-            fid_avg=False,
-            fit=True,
-            fitparams=[None, None, 20, None, None, 20],
-            normalize=False,
-            title=None,
-            export=False,
-        )
-
-    def save(self, result: dict = None):
-        data_path = DATA_PATH
-        exp_name = expt_name + '_Q' + str(QubitIndex)
-        print('Experiment name: ' + exp_name)
-        file_path = get_next_filename(data_path, exp_name, suffix='.h5')
-        print('Current data file: ' + file_path)
-
-        data_dict = self.data
-        if result is not None:
-            saveshot(file_path, data_dict, result)
-        else:
-            saveshot(file_path, data_dict)
-
-
-if __name__ == "__main__":
-    ###################
-    # Experiment sweep parameter
-    ###################
-
-    Shots = 5000
-    config.update([('shots', Shots)])
-
-    ###################
-    # Run the Program
-    ###################
-
-    ss = SingleShot_gef(soccfg, config)
-    ss.run(shot_f=False)
-    ss.plot()
-    ss.save()

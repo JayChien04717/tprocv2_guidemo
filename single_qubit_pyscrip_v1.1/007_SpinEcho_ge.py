@@ -76,7 +76,7 @@ class SpinEchoProgram(AveragerProgramV2):
                        envelope="ramp",
                        freq=cfg['qubit_freq_ge'],
                        # current phase + time * 2pi * ramsey freq
-                       phase=cfg['qubit_phase'] + \
+                       phase=cfg['qubit_phase'] +
                        cfg['wait_time']*360*cfg['ramsey_freq'],
                        gain=cfg['qubit_gain_ge'] / 2,
                        )
@@ -111,7 +111,9 @@ se = SpinEchoProgram(
     soccfg, reps=100, final_delay=config['relax_delay'], cfg=config)
 py_avg = 10
 iq_list = se.acquire(soc, soft_avgs=py_avg, progress=True)
-delay_times = se.get_time_param('wait', "t", as_array=True)
+delay1 = se.get_time_param('wait1', "t", as_array=True)
+delay2 = se.get_time_param('wait2', "t", as_array=True)
+delay_times = delay1 + delay2
 amps = np.abs(iq_list[0][0].dot([1, 1j]))
 
 ###################

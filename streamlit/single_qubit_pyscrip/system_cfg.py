@@ -17,17 +17,18 @@ hw_cfg = {
 readout_cfg = {
     "trig_time": 0.50,  # [Clock ticks] - get this value from TOF experiment
     "ro_length": 1.0,  # [us]
-    "mixer_freq": 5600,  # [MHz] - used for mux_ch and interpolated_ch
+    "mixer_freq": 5600.0,  # [MHz] - used for mux_ch and interpolated_ch
 
     # Changes related to the resonator output channel
-    "res_freq_ge": [5000, 5100, 5200, 5300, 5400, 5500],  # [MHzx]
+    "res_freq_ge": [5000.0, 5100.0, 5200.0, 5300.0, 5400.0, 5500.0],  # [MHzx]
     "res_gain_ge": [0.05, 0.05, 0.05, 0.05, 0.05, 0.05],  # [DAC units]
-    "res_freq_ef": [5000, 5100, 5200, 5300, 5400, 5500],  # [MHz]
+    "res_freq_ef": [5000.0, 5100.0, 5200.0, 5300.0, 5400.0, 5500.0],  # [MHz]
     "res_gain_ef": [0.05, 0.05, 0.05, 0.05, 0.05, 0.05],  # [DAC units]
     "res_length": 1.0,  # [us] (1.0 for res spec)
-    "res_phase": [0, 0, 0, 0, 0, 0],  # Rotation Angle From QICK Function
+    # Rotation Angle From QICK Function
+    "res_phase": [0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
     # Threshold for Distinguish g/e, from QICK Function
-    "threshold": [0, 0, 0, 0, 0, 0],
+    "threshold": [0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
 }
 
 # Qubit Configuration
@@ -55,3 +56,20 @@ expt_cfg = {
     "relax_delay": 10,  # [us]
     "py_avg": 100
 }
+
+fit_key = [
+    'res_spec_ge',
+    'res_punch_out'
+    'qubit_spec_ge',
+    'time_rabi_ge',
+    'power_rabi_ge',
+    'Ramsey_ge',
+    'SpinEcho_ge',
+    'T1_ge',
+    'res_spec_ef',
+    'qubit_spec_ef',
+    'qubit_temp',
+    'power_rabi_ef',
+    'Ramsey_ef',
+    'SingleShot'
+]
