@@ -166,7 +166,7 @@ def saveh5(file_path: str, data_dict: Dict[str, Any], config: Optional[Dict[str,
             f.attrs["result"] = json.dumps(result)
 
 
-def saveshot(file_path: str, data_dict: Dict[str, Any], config: Optional[Dict[str, Any]] = None, result: Optional[Dict[str, Any]] = None) -> None:
+def saveshot(file_path: str, exp_name: str, data_dict: Dict[str, Any], config: Optional[Dict[str, Any]] = None, result: Optional[Dict[str, Any]] = None) -> None:
     """
     Save experiment data to an HDF5 file.
 
@@ -182,6 +182,34 @@ def saveshot(file_path: str, data_dict: Dict[str, Any], config: Optional[Dict[st
 
         for key, value in data_dict.items():
             data_grp.create_dataset(key, data=value)
+
+        if exp_name:
+            f.attrs["experiment_name"] = exp_name
+        if config:
+            f.attrs["config"] = json.dumps(config)
+        if result:
+            f.attrs["result"] = json.dumps(result)
+
+
+def saveshot(file_path: str, data_dict: Dict[str, Any], config: Optional[Dict[str, Any]] = None, result: Optional[Dict[str, Any]] = None) -> None:
+    """
+    Save data into an HDF5 file.
+
+    Parameters:
+    - data (dict): Dictionary containing dataset name and corresponding data.
+    - config (dict): Configuration parameters to be stored as attributes.
+    - result (dict): Result parameters to be stored as attributes.
+    - filename (str): HDF5 file path.
+    - data (str): Name of the group where data will be stored.
+    """
+    with h5py.File(file_path, 'a') as f:
+        # Create or get the group
+        group = f.require_group('data')
+
+        # Save data into the group
+        for key, value in data_dict.items():
+            group.create_dataset(
+                key, data=value, compression="gzip", overwrite=True)
 
         if "experiment_name" in data_dict:
             f.attrs["experiment_name"] = data_dict["experiment_name"]

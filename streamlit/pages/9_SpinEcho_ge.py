@@ -39,7 +39,9 @@ class SpinEchoge:
         prog = SpinEchoProgram(
             self.soccfg, reps=reps, final_delay=self.cfg['relax_delay'], cfg=self.cfg)
         py_avg = self.cfg['py_avg']
-        self.iq_list = prog.acquire(st.session_state.soc, soft_avgs=py_avg)
+        st_progress = st.progress(0)
+        self.iq_list = prog.acquire(
+            st.session_state.soc, soft_avgs=py_avg, st_progress=st_progress)
         self.t = (prog.get_time_param('wait1', "t", as_array=True) +
                   prog.get_time_param('wait2', "t", as_array=True))
 

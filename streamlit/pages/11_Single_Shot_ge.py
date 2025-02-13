@@ -32,6 +32,7 @@ class SingleShot_ge:
     def __init__(self, soccfg, cfg):
         self.soccfg = soccfg
         self.cfg = cfg
+        self.shot = cfg['shots']
 
     def run(self, shot_f=False):
         shot_g = SingleShotProgram_g(
@@ -39,10 +40,14 @@ class SingleShot_ge:
         shot_e = SingleShotProgram_e(
             self.soccfg, reps=1, final_delay=self.cfg['relax_delay'], cfg=self.cfg)
 
+        st_progress = st.progress(0)
+        st.write('shot g')
         self.iq_list_g = shot_g.acquire(
-            st.session_state.soc, soft_avgs=1, progress=True)
+            st.session_state.soc, soft_avgs=1, progress=True, st_progress=st_progress)
+        st_progress = st.progress(0)
+        st.write('shot g')
         self.iq_list_e = shot_e.acquire(
-            st.session_state.soc, soft_avgs=1, progress=True)
+            st.session_state.soc, soft_avgs=1, progress=True, st_progress=st_progress)
 
         I_g = self.iq_list_g[0][0].T[0]
         Q_g = self.iq_list_g[0][0].T[1]

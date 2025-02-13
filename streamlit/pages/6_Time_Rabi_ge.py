@@ -39,7 +39,9 @@ class TimeRabi:
         prog = LengthRabiProgram(
             self.soccfg, reps=reps, final_delay=self.cfg['relax_delay'], cfg=self.cfg)
         py_avg = self.cfg['py_avg']
-        self.iq_list = prog.acquire(st.session_state.soc, soft_avgs=py_avg)
+        st_progress = st.progress(0)
+        self.iq_list = prog.acquire(
+            st.session_state.soc, soft_avgs=py_avg, st_progress=st_progress)
         self.length = prog.get_pulse_param(
             "qubit_pulse", "length", as_array=True)
 

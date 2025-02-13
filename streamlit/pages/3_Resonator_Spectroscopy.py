@@ -39,7 +39,9 @@ class ResonatorOnetone:
         prog = SingleToneSpectroscopyProgram(
             self.soccfg, reps=reps, final_delay=self.cfg['relax_delay'], cfg=self.cfg)
         py_avg = self.cfg['py_avg']
-        self.iq_list = prog.acquire(st.session_state.soc, soft_avgs=py_avg)
+        st_progress = st.progress(0)
+        self.iq_list = prog.acquire(
+            st.session_state.soc, soft_avgs=py_avg, st_progress=st_progress)
         self.freqs = prog.get_pulse_param("res_pulse", "freq", as_array=True)
 
     def plot(self, fit=False):

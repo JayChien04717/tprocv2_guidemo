@@ -1,9 +1,12 @@
-from system_tool import readh5
+# from system_tool import readh5
 from pprint import pprint
 import h5py
-loaded_data = readh5(
-    r'C:\Users\SQC\Desktop\tprocv2_scrip-main\streamlit\data\2025\02\02-10\002_punchout_Q0_20.h5')
-# print(loaded_data['parameter'])
+
+loaded_data = (
+    r'C:\Users\SQC\Desktop\tprocv2_scrip-main\streamlit\data\2025\02\02-13\000_SingleShot_Q0_2.h5')
+with h5py.File(loaded_data, "r") as f:
+
+    print(f.keys())
 
 
 def getparameter(file_path):
@@ -52,7 +55,6 @@ def getparametervalue(file_path):
     return values
 
 
-print(loaded_data['parameter'].keys())
 # # 取得 parameter 的 key 列表
 # keys = getparameter(
 #     r'C:\Users\SQC\Desktop\QICK\jay scrip\tprocv2_demos-main\data\2025\02\02-04\002b_res_pumchout_ge_Q2_1.h5')
