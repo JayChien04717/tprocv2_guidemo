@@ -1,2 +1,2 @@
-# This repostory is the code fot Qick zcu tprocv2 driver
+# This repostory is the code for Qick zcu tprocv2 measurent scrip
 
