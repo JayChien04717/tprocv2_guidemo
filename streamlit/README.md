@@ -12,6 +12,8 @@ All the qubit measruement scrip are all in the `single_qubit_pyscrip` folder. Yo
 
 ## Code construnction of streamlit pages
 
-* import package and 
+* import package and measurement funciton
+* Wite a class function to acquire the Qick measurement funciont
+* copy the column of streamlit funciton. If the experiment is 1D, you can reference the `3_Resonator_spectroscopy.py`. If it si 2D you can reference `4_Resonator_Punch_out.py`
 
 
