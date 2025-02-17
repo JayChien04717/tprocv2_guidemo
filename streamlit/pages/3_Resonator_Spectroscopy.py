@@ -93,7 +93,7 @@ with col1:
         "Start Frequency (MHz)", min_value=0, value=4000, step=1)
 with col2:
     stop_freq = st.number_input(
-        "Stop Frequency (MHz)", min_value=start_freq, value=5000, step=1)
+        "Stop Frequency (MHz)", min_value=start_freq, value=9000, step=1)
 with col3:
     steps = st.number_input("Steps:", min_value=1,
                             max_value=1000, value=101, step=1)

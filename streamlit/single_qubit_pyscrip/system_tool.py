@@ -7,6 +7,7 @@ import datetime
 import json
 import re
 from typing import Dict, Any, Union, Optional
+import Labber
 
 
 def update_python_dict(file_path: str, updates: Dict[str, Union[Any, Dict[int, Any]]]) -> None:
@@ -133,6 +134,21 @@ def get_next_filename(base_path: str, exp_name: str, suffix: str = ".h5") -> str
         i += 1
 
 
+def get_next_filename_labber(dest_path: str, exp_name: str) -> str:
+    # make sure dest_path is absolute path
+    dest_path = os.path.abspath(dest_path)
+    yy, mm, dd = datetime.datetime.today().strftime('%Y-%m-%d').split('-')
+    save_path = os.path.join(dest_path, yy, mm, f"Data_{mm}{dd}")
+    os.makedirs(save_path, exist_ok=True)
+
+    existing_files = [f for f in os.listdir(save_path) if re.match(
+        rf"{re.escape(exp_name)}_\d+\.hdf5", f)]
+    next_index = max([int(re.search(r"_(\d+)\.hdf5", f).group(1))
+                     for f in existing_files], default=0) + 1
+
+    return os.path.join(save_path, f"{exp_name}_{next_index}.hdf5")
+
+
 def saveh5(file_path: str, data_dict: Dict[str, Any], config: Optional[Dict[str, Any]] = None, result: Optional[Dict[str, Any]] = None) -> None:
     """
     Save experiment data to an HDF5 file.
@@ -160,31 +176,6 @@ def saveh5(file_path: str, data_dict: Dict[str, Any], config: Optional[Dict[str,
                 data_dict["z_name"], data=data_dict["z_value"])
         if "experiment_name" in data_dict:
             f.attrs["experiment_name"] = data_dict["experiment_name"]
-        if config:
-            f.attrs["config"] = json.dumps(config)
-        if result:
-            f.attrs["result"] = json.dumps(result)
-
-
-def saveshot(file_path: str, exp_name: str, data_dict: Dict[str, Any], config: Optional[Dict[str, Any]] = None, result: Optional[Dict[str, Any]] = None) -> None:
-    """
-    Save experiment data to an HDF5 file.
-
-    Args:
-        file_path (str): Path to save the HDF5 file.
-        data_dict (Dict[str, Any]): Data to be stored.
-        config (Optional[Dict[str, Any]]): Configuration parameters.
-        result (Optional[Dict[str, Any]]): Experimental results.
-    """
-    with h5py.File(file_path, "w") as f:
-
-        data_grp = f.create_group("data")
-
-        for key, value in data_dict.items():
-            data_grp.create_dataset(key, data=value)
-
-        if exp_name:
-            f.attrs["experiment_name"] = exp_name
         if config:
             f.attrs["config"] = json.dumps(config)
         if result:
@@ -319,6 +310,29 @@ def read_h5_file(file_path: str) -> Dict[str, Any]:
             f.attrs["result"]) if "result" in f.attrs else None
 
     return data
+
+
+def hdf5_generator(
+        filepath: str,
+        x_info: dict, z_info: dict,
+        y_info: dict = None, comment=None, tag=None):
+
+    zdata = z_info['values']
+    z_info.update({'complex': True, 'vector': False})
+    log_channels = [z_info]
+    step_channels = list(filter(None, [x_info, y_info]))
+
+    fObj = Labber.createLogFile_ForData(filepath, log_channels, step_channels)
+    if y_info:
+        for trace in zdata:
+            fObj.addEntry({z_info['name']: trace})
+    else:
+        fObj.addEntry({z_info['name']: zdata})
+
+    if comment:
+        fObj.setComment(comment)
+    if tag:
+        fObj.setTags(tag)
 
 
 if __name__ == "__main__":
