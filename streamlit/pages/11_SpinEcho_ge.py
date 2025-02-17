@@ -8,7 +8,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 import datetime
 
-
 st.title("SpinEcho ge")
 
 # ----- Experiment Configurations ----- #
@@ -81,7 +80,7 @@ class SpinEchoge:
         data_dict = {
             "experiment_name": "spinecho_ge",
             "x_name": "Time (us)",
-            "x_value": self.t,
+            "x_value": self.t*2,
             "z_name": "ADC unit (a.u)",
             "z_value": self.iq_list[0][0].dot([1, 1j])
         }
@@ -116,7 +115,6 @@ class SpinEchoge:
             comment=f'{result_dict["notes"]}',
             tag='T2'
         )
-
 
 col1, col2, col3 = st.columns(3)
 
@@ -173,8 +171,8 @@ config_key = st.sidebar.selectbox(
 new_value = st.sidebar.text_input(f"New value for {config_key}:")
 if st.sidebar.button("Update Config"):
     # Update merged dictionary
-    st.session_state.config[config_key] = float(
-        new_value) if '.' in new_value else int(new_value)
+    st.session_state.config[config_key] = eval(
+        new_value) if new_value.isnumeric() else new_value
 
     # Split back into individual configs
     st.session_state.hw_cfg = {
@@ -216,7 +214,6 @@ if "spinecho" in st.session_state and st.session_state.spinecho:
 
     st.session_state.experiment_notes = st.text_area(
         "Experiment Notes", placeholder="Note or results...")
-
     col1, col2 = st.columns(2)
     with col1:
         if st.button("Save"):
