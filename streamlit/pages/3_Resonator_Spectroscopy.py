@@ -1,5 +1,6 @@
 import streamlit as st
 from single_qubit_pyscrip.system_tool import select_config_idx, saveh5, get_next_filename
+from single_qubit_pyscrip.system_tool import hdf5_generator, get_next_filename_labber
 import single_qubit_pyscrip.fitting as fitter
 from single_qubit_pyscrip.SQ002_res_spec_ge import SingleToneSpectroscopyProgram
 from qick.asm_v2 import QickSpan, QickSweep1D
@@ -86,6 +87,34 @@ class ResonatorOnetone:
             st.session_state.get("experiment_notes", ""))}
         saveh5(file_path, data_dict, result=result_dict)
 
+    def save_labber(self):
+        """
+        Save experimental data into an HDF5 file.
+        """
+        if self.freqs is None or self.iq_list is None:
+            st.error("No data available. Run the experiment first.")
+            return
+
+        data_path = st.session_state.datafile
+        exp_name = f"{st.session_state.expt_name}_Q{st.session_state.QubitIndex}"
+        st.write(f'Experiment name: {exp_name}')
+
+        file_path = get_next_filename_labber(data_path, exp_name)
+        st.write(f'Current data file: {file_path}')
+
+        result_dict = {"notes": str(
+            st.session_state.get("experiment_notes", ""))}
+
+        hdf5_generator(
+            filepath=file_path,
+            x_info={'name': 'Frequency', 'unit': "Hz",
+                    'values': self.freqs*1e9},
+            z_info={'name': 'Signal', 'unit': 'a.u.',
+                    'values':  self.iq_list[0][0].dot([1, 1j])},
+            comment=f'{result_dict["notes"]}',
+            tag='OneTone'
+        )
+
 
 col1, col2, col3 = st.columns(3)
 with col1:
@@ -135,8 +164,8 @@ config_key = st.sidebar.selectbox(
 new_value = st.sidebar.text_input(f"New value for {config_key}:")
 if st.sidebar.button("Update Config"):
     # Update merged dictionary
-    st.session_state.config[config_key] = eval(
-        new_value) if new_value.isnumeric() else new_value
+    st.session_state.config[config_key] = float(
+        new_value) if '.' in new_value else int(new_value)
 
     # Split back into individual configs
     st.session_state.hw_cfg = {
@@ -176,6 +205,13 @@ if "onetone" in st.session_state and st.session_state.onetone:
 
     st.session_state.experiment_notes = st.text_area(
         "Experiment Notes", placeholder="Note or results...")
-    if st.button("Save"):
-        st.session_state.onetone.save()
-        st.success("Data saved successfully!")
+
+    col1, col2 = st.columns(2)
+    with col1:
+        if st.button("Save"):
+            st.session_state.onetone.save()
+            st.success("Data saved successfully!")
+    with col2:
+        if st.button("SaveLabber"):
+            st.session_state.onetone.save_labber()
+            st.success("LabberData saved successfully!")

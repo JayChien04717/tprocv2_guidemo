@@ -44,6 +44,6 @@ class PulseProbeSpectroscopyProgram(AveragerProgramV2):
         self.send_readoutconfig(ch=cfg['ro_ch'], name="myro", t=0)
         self.pulse(ch=self.cfg["qubit_ch"],
                    name="qubit_pulse", t=0)  # play probe pulse
-
+        self.delay_auto(t=0.05)
         self.pulse(ch=cfg['res_ch'], name="res_pulse", t=0)
         self.trigger(ros=[cfg['ro_ch']], pins=[0], t=cfg['trig_time'])

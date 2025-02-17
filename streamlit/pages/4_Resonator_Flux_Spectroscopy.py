@@ -99,7 +99,7 @@ class ResonatorOnetoneFlux:
         if self.iq_list is not None:
             fig, ax = plt.subplots(figsize=(12, 5))
             ax.pcolormesh(self.current*1e-3, self.freqs,
-                          np.abs(self.iq_list).T, label="Magnitude",)
+                          np.abs(self.iq_list).T, label="Magnitude")
             ax.set_xlabel("Current (mA)")
             ax.set_ylabel("Frequency (MHz)")
             ax.set_title("Resonator OneTone Flux Spectroscopy")

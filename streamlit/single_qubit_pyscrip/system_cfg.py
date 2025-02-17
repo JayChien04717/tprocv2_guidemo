@@ -1,7 +1,7 @@
 
 hw_cfg = {
     # DAC
-    "qubit_ch": [1]*6,  # Qubit Channel Port, Full-speed DAC
+    "qubit_ch": [2]*6,  # Qubit Channel Port, Full-speed DAC
     "res_ch": [0]*6,  # Single Tone Readout Port, Full-speed DAC
     "qubit_ch_ef": [1]*6,  # Qubit ef Channel, Full-speed DAC
     "mux_ch": 12,
@@ -52,7 +52,7 @@ qubit_cfg = {
 
 
 expt_cfg = {
-    "reps": 1,
+    "reps": 10,
     "relax_delay": 10,  # [us]
     "py_avg": 100
 }

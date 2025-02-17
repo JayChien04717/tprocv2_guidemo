@@ -110,7 +110,7 @@ class SingleToneSpectroscopyPunchout:
         hdf5_generator(
             filepath=file_path,
             x_info={'name': 'Frequency', 'unit': "Hz",
-                    'values': self.freqs*1e9},
+                    'values': self.freqs*1e3},
             y_info={'name': 'Gain', 'unit': "a,u",
                     'values': self.gains},
             z_info={'name': 'Signal', 'unit': 'a.u.',
@@ -223,7 +223,7 @@ if "punchout" in st.session_state and st.session_state.punchout:
 
     col1, col2 = st.columns(2)
     with col1:
-        if st.button("Sav`e"):
+        if st.button("Save"):
             st.session_state.punchout.save()
             st.success("Data s`aved successfully!")
     with col2:

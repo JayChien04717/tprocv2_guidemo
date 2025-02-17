@@ -143,10 +143,10 @@ def get_next_filename_labber(dest_path: str, exp_name: str) -> str:
 
     existing_files = [f for f in os.listdir(save_path) if re.match(
         rf"{re.escape(exp_name)}_\d+\.hdf5", f)]
-    next_index = max([int(re.search(r"_(\d+)\.hdf5", f).group(1))
+    next_index = max([int(re.search(r"_(\d+)", f).group(1))
                      for f in existing_files], default=0) + 1
 
-    return os.path.join(save_path, f"{exp_name}_{next_index}.hdf5")
+    return os.path.join(save_path, f"{exp_name}_{next_index}")
 
 
 def saveh5(file_path: str, data_dict: Dict[str, Any], config: Optional[Dict[str, Any]] = None, result: Optional[Dict[str, Any]] = None) -> None:
@@ -317,6 +317,8 @@ def hdf5_generator(
         x_info: dict, z_info: dict,
         y_info: dict = None, comment=None, tag=None):
 
+    np.bool = bool
+    np.float = float
     zdata = z_info['values']
     z_info.update({'complex': True, 'vector': False})
     log_channels = [z_info]

@@ -1,7 +1,6 @@
 import streamlit as st
 from single_qubit_pyscrip.system_tool import select_config_idx, saveh5, get_next_filename
 from single_qubit_pyscrip.system_tool import hdf5_generator, get_next_filename_labber
-import single_qubit_pyscrip.fitting as fitter
 from single_qubit_pyscrip.SQ003_qubit_spec_ge import PulseProbeSpectroscopyProgram
 from qick.asm_v2 import QickSpan, QickSweep1D
 import matplotlib.pyplot as plt
@@ -54,6 +53,7 @@ class QubitTwotoneFlux:
         self.cfg = cfg
         self.iq_list = None
         self.freqs = None
+        self.current = None
 
     def run(self, reps):
         prog = PulseProbeSpectroscopyProgram(
@@ -90,25 +90,20 @@ class QubitTwotoneFlux:
             progress = (idx + 1) / total_steps
             progress_bar.progress(progress)  # Update Streamlit's progress bar
 
-        self.freqs = prog.get_pulse_param("res_pulse", "freq", as_array=True)
+        self.freqs = prog.get_pulse_param("qubit_pulse", "freq", as_array=True)
 
-    def plot(self, fit=False):
+    def plot(self):
         plt.rcParams.update({'font.size': 14})
         if self.iq_list is not None:
             fig, ax = plt.subplots(figsize=(12, 5))
-            ax.plot(self.freqs, np.abs(
-                self.iq_list[0][0].dot([1, 1j])), label="Magnitude", marker='o', markersize=5)
-            ax.set_xlabel("Frequency (MHz)")
-            ax.set_ylabel("ADC unit (a.u)")
-            ax.set_title("Qubit ge Spectroscopy")
+            ax.pcolormesh(self.current, self.freqs,
+                          np.abs(self.iq_list).T, label="Magnitude")
+            # ax.pcolormesh(np.abs(self.iq_list).T, label="Magnitude")
+            ax.set_xlabel("Current (mA)")
+            ax.set_ylabel("Frequency (MHz)")
+            ax.set_title("Qubit ge Flux Spectroscopy")
             ax.legend()
-            if fit:
-                pOpt, pCov = fitter.fitlor(
-                    self.freqs, np.abs(self.iq_list[0][0].dot([1, 1j])))
-                resonacefreq = pOpt[2]
-                ax.plot(self.freqs, fitter.lorfunc(
-                    self.freqs, *pOpt), label=f"Fit res freq = {resonacefreq:.0f}MHz")
-                ax.legend()
+
             # Save to session state
             st.session_state.twotoneflux_fig = fig
             st.session_state.timetag = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -156,7 +151,7 @@ class QubitTwotoneFlux:
             x_info={'name': 'Current', 'unit': "A",
                     'values': self.current},
             y_info={'name': 'Frequency', 'unit': "Hz",
-                    'values': self.freqs*1e9},
+                    'values': self.freqs*1e3},
             z_info={'name': 'Signal', 'unit': 'a.u.',
                     'values':  np.array(self.iq_list).T},
             comment='',
@@ -264,21 +259,17 @@ if st.sidebar.button("Update Config"):
 # ---- Streamlit Functions ---- #
 ###############################
 
-fit_checkbox = st.checkbox(
-    "Fit Data", value=st.session_state.get("fit_checkbox", False))
-st.session_state.fit_checkbox = fit_checkbox
-
 
 if st.button("Run"):
     st.session_state.twotoneflux = QubitTwotoneFlux(
         st.session_state.soccfg, st.session_state.config)
     st.session_state.twotoneflux.run(reps=st.session_state.config['reps'])
     st.success("Experiment completed!")
-    st.session_state.twotoneflux.plot(fit=st.session_state.fit_checkbox)
+    st.session_state.twotoneflux.plot()
 
 if "twotoneflux" in st.session_state and st.session_state.twotoneflux:
 
-    st.session_state.twotoneflux.plot(fit=st.session_state.fit_checkbox)
+    st.session_state.twotoneflux.plot()
 
     if st.session_state.twotoneflux_fig:
         st.write(f"### Last Measurement Time: {st.session_state.timetag}")
