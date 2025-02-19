@@ -109,7 +109,7 @@ class TimeRabi:
         """
         Save experimental data into an HDF5 file.
         """
-        if self.freqs is None or self.iq_list is None:
+        if self.length is None or self.iq_list is None:
             st.error("No data available. Run the experiment first.")
             return
 

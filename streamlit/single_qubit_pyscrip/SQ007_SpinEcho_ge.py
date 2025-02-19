@@ -42,7 +42,7 @@ class SpinEchoProgram(AveragerProgramV2):
                        envelope="ramp",
                        freq=cfg['qubit_freq_ge'],
                        phase=cfg['qubit_phase'],
-                       gain=cfg['qubit_gain_ge'] / 2,
+                       gain=cfg['qubit_half_gain_ge'],
                        )
 
         # pi pulse
@@ -54,14 +54,21 @@ class SpinEchoProgram(AveragerProgramV2):
                        gain=cfg['qubit_gain_ge'],
                        )
 
+        # self.add_pulse(ch=qubit_ch, name="qubit_pulse2", ro_ch=ro_ch,
+        #                style="arb",
+        #                envelope="ramp",
+        #                freq=cfg['qubit_freq_ge'],
+        #                # current phase + time * 2pi * ramsey freq
+        #                phase=cfg['qubit_phase'] +
+        #                cfg['wait_time']*360*cfg['ramsey_freq'],
+        #                gain=cfg['qubit_gain_ge'] / 2,
+        #                )
         self.add_pulse(ch=qubit_ch, name="qubit_pulse2", ro_ch=ro_ch,
                        style="arb",
                        envelope="ramp",
                        freq=cfg['qubit_freq_ge'],
-                       # current phase + time * 2pi * ramsey freq
-                       phase=cfg['qubit_phase'] +
-                       cfg['wait_time']*360*cfg['ramsey_freq'],
-                       gain=cfg['qubit_gain_ge'] / 2,
+                       phase=cfg['qubit_phase'],
+                       gain=cfg['qubit_half_gain_ge'],
                        )
 
     def _body(self, cfg):

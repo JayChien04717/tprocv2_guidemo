@@ -128,7 +128,7 @@ with col2:
 
 with col3:
     steps = st.number_input("Steps:", min_value=1,
-                            max_value=1000, value=101, step=1)
+                            max_value=10000, value=101, step=1)
 
 st.session_state.config.update(
     [('steps', steps), ('qubit_freq_ge', QickSweep1D('freqloop', start_freq, stop_freq))])

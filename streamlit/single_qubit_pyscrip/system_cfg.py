@@ -36,11 +36,13 @@ qubit_cfg = {
     # Freqs of Qubit g/e Transition
     "qubit_freq_ge": [4000, 4000, 4000, 4000, 4000, 4000],
     "qubit_gain_ge": [0.1, 0.1, 0.1, 0.1, 0.1],
+    "qubit_half_gain_ge": [0.1, 0.1, 0.1, 0.1, 0.1],
     "qubit_length_ge": 5,  # [us] for Constant Pulse
     # [MHz] Freqs of Qubit e/f Transition
     "qubit_freq_ef": [4000, 4000, 4000, 4000, 4000, 4000],
     # [0.01, 0.05, 0.05, 0.05, 0.01, 0.5], # [DAC units] Pulse Gain
     "qubit_gain_ef": [0.0891, 0.086, 0.03, 0.03, 0.03, 0.1],
+    "qubit_half_gain_ef": [0.0891, 0.086, 0.03, 0.03, 0.03, 0.1],
     "qubit_length_ef": 25.0,  # [us] for Constant Pulse
     "qubit_phase": 0,  # [deg]
     # [us] for Gaussian Pulse

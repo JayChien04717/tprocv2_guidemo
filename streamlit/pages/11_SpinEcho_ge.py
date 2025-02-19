@@ -50,14 +50,14 @@ class SpinEchoge:
         plt.rcParams.update({'font.size': 14})
         if self.iq_list is not None:
             fig, ax = plt.subplots(figsize=(14, 7))
-            ax.plot(self.t*2, np.abs(
+            ax.plot(self.t, np.abs(
                 self.iq_list[0][0].dot([1, 1j])), label="Magnitude",  marker='o', markersize=5)
 
             if fit:
                 pOpt, pCov = fitter.fitdecaysin(
                     self.t, np.abs(self.iq_list[0][0].dot([1, 1j])))
-                ax.plot(self.t*2, fitter.decaysin(
-                    self.t*2, *pOpt), label=f"Fit Echo decay = {pOpt[3]:.3f}us")
+                ax.plot(self.t, fitter.decaysin(
+                    self.t, *pOpt), label=f"Fit Echo decay = {pOpt[3]:.3f}us")
 
             ax.legend(loc="upper right")
             ax.set_xlabel("Time (us)")
@@ -80,7 +80,7 @@ class SpinEchoge:
         data_dict = {
             "experiment_name": "spinecho_ge",
             "x_name": "Time (us)",
-            "x_value": self.t*2,
+            "x_value": self.t,
             "z_name": "ADC unit (a.u)",
             "z_value": self.iq_list[0][0].dot([1, 1j])
         }
@@ -115,6 +115,7 @@ class SpinEchoge:
             comment=f'{result_dict["notes"]}',
             tag='T2'
         )
+
 
 col1, col2, col3 = st.columns(3)
 
