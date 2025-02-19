@@ -152,12 +152,12 @@ class ResonatorOnetoneFlux:
 
         hdf5_generator(
             filepath=file_path,
-            x_info={'name': 'Current', 'unit': "A",
-                    'values': self.current},
-            y_info={'name': 'Frequency', 'unit': "Hz",
+            x_info={'name': 'Frequency', 'unit': "Hz",
                     'values': self.freqs*1e9},
+            y_info={'name': 'Current', 'unit': "A",
+                    'values': self.current},
             z_info={'name': 'Signal', 'unit': 'a.u.',
-                    'values':  np.array(self.iq_list).T},
+                    'values':  np.array(self.iq_list)},
             comment=f'{result_dict["notes"]}',
             tag='OneTone'
         )

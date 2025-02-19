@@ -120,12 +120,12 @@ class QubitTwotoneFlux:
 
         data_dict = {
             "experiment_name": "qubit_flux_spec_ge",
-            "x_name": "Current (mA)",
-            "x_value": self.current,
-            "y_name": "Frequency (MHz)",
-            "y_value": self.freqs,
+            "y_name": "Current (mA)",
+            "y_value": self.current,
+            "x_name": "Frequency (MHz)",
+            "x_value": self.freqs,
             "z_name": "ADC unit (a.u)",
-            "z_value": np.array(self.iq_list).T
+            "z_value": np.array(self.iq_list)
         }
         result_dict = {"notes": str(
             st.session_state.get("experiment_notes", ""))}
@@ -148,12 +148,12 @@ class QubitTwotoneFlux:
 
         hdf5_generator(
             filepath=file_path,
-            x_info={'name': 'Current', 'unit': "A",
-                    'values': self.current},
-            y_info={'name': 'Frequency', 'unit': "Hz",
+            x_info={'name': 'Frequency', 'unit': "Hz",
                     'values': self.freqs*1e3},
+            y_info={'name': 'Current', 'unit': "A",
+                    'values': self.current},
             z_info={'name': 'Signal', 'unit': 'a.u.',
-                    'values':  np.array(self.iq_list).T},
+                    'values':  np.array(self.iq_list)},
             comment='',
             tag='TwoTone'
         )
