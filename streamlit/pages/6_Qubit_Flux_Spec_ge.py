@@ -149,7 +149,7 @@ class QubitTwotoneFlux:
         hdf5_generator(
             filepath=file_path,
             x_info={'name': 'Frequency', 'unit': "Hz",
-                    'values': self.freqs*1e3},
+                    'values': self.freqs*1e6},
             y_info={'name': 'Current', 'unit': "A",
                     'values': self.current},
             z_info={'name': 'Signal', 'unit': 'a.u.',

@@ -250,9 +250,9 @@ def amprabi_analyze(x: int, y: float, fit: bool = True, normalize: bool = False)
         return round(pi, 1), round(pi2, 1), max(y)-min(y)
     else:
         plt.axvline(pi_gain, ls='--', c='red',
-                    label=f'$\pi$ gain={pi_gain:.1f}')
+                    label=f'$\pi$ gain={pi_gain:.3f}')
         plt.axvline(pi2_gain, ls='--', c='red',
-                    label=f'$\pi$ gain={(pi2_gain):.1f}')
+                    label=f'$\pi2$ gain={(pi2_gain):.3f}')
         plt.legend(loc=4)
         plt.tight_layout()
         plt.show()
@@ -339,7 +339,7 @@ def lengthrabi_analyze(x: float, y: float, fit: bool = True, normalize: bool = F
     plt.plot(x, y, label='meas', ls='-', marker='o', markersize=3)
     if fit == True:
         plt.plot(x, sim, label='fit')
-    plt.title(f'Length Rabi', fontsize=15)
+    plt.title(f'Length Rabi freq = {pOpt[1]:.0f} MHz', fontsize=15)
     plt.xlabel('$t\ (us)$', fontsize=15)
     if normalize == True:
         plt.ylabel('Population', fontsize=15)
@@ -419,6 +419,7 @@ def T2fring_analyze(x: float, y: float, fit: bool = True, normalize: bool = Fals
     plt.plot(x, y, label='meas', ls='-', marker='o', markersize=3)
     if fit == True:
         plt.plot(x, sim, label='fit')
+        plt.plot(x, pOpt[0]*np.exp(-x / pOpt[3]) + pOpt[4])
     plt.title(
         f'T2 fringe = {pOpt[3]:.2f}$\mu s, detune = {pOpt[1]:.2f}MHz \pm {(error[1])*1e3:.2f}kHz$', fontsize=15)
     plt.xlabel('$t\ (\mu s)$', fontsize=15)
