@@ -208,44 +208,6 @@ def saveshot(file_path: str, data_dict: Dict[str, Any], config: Optional[Dict[st
             f.attrs["config"] = json.dumps(config)
         if result:
             f.attrs["result"] = json.dumps(result)
-# def readh5(file_path: str, option: int = 4) -> Dict[str, Any]:
-#     """
-#     Read contents from an HDF5 file.
-
-#     Args:
-#         file_path (str): Path to the HDF5 file.
-#         option (int):
-#             1 - Read only "parameter" and "data" groups.
-#             2 - Read only config attributes.
-#             3 - Read only result attributes.
-#             4 - Read all available information (default).
-
-#     Returns:
-#         Dict[str, Any]: The requested data based on the specified option.
-#     """
-#     parameter_dict, data_dict = {}, {}
-#     config, result = None, None
-
-#     with h5py.File(file_path, "r") as f:
-#         if option in [1, 4]:
-#             if "parameter" in f:
-#                 param_grp = f["parameter"]
-#                 for grp_name in param_grp:
-#                     group = param_grp[grp_name]
-#                     dataset_names = list(group.keys())
-#                     if dataset_names:
-#                         parameter_dict[grp_name] = group[dataset_names[0]][:]
-#             if "data" in f:
-#                 data_grp = f["data"]
-#                 for dset_name in data_grp:
-#                     data_dict[dset_name] = data_grp[dset_name][:]
-
-#         if option in [2, 4] and "config" in f.attrs:
-#             config = json.loads(f.attrs["config"])
-#         if option in [3, 4] and "result" in f.attrs:
-#             result = json.loads(f.attrs["result"])
-
-#     return {"parameter": parameter_dict, "data": data_dict, "config": config, "result": result}
 
 
 def read_h5_file(file_path: str) -> Dict[str, Any]:
