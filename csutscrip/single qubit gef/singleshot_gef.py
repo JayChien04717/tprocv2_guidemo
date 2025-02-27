@@ -20,7 +20,7 @@ from qick import QickConfig
 Pyro4.config.SERIALIZER = "pickle"
 Pyro4.config.PICKLE_PROTOCOL_VERSION = 4
 
-ns_host = "192.168.10.97"
+ns_host = "192.168.20.46"
 ns_port = 8888
 proxy_name = "myqick"
 
@@ -174,7 +174,7 @@ class SingleShotProgram_f(AveragerProgramV2):
 
 if __name__ == '__main__':
     # measure
-    
+
     from singleshotplot import hist
     # expt_cfg={'steps': 5000}
     config.update([('steps', 5000)])
@@ -200,14 +200,13 @@ if __name__ == '__main__':
     # plot
 
     data = {
-        'Ig':I_g,
-        'Qg':Q_g,
-        'Ie':I_e,
-        'Qe':Q_e,
-        'If':I_f,
-        'Qf':Q_f,
+        'Ig': I_g,
+        'Qg': Q_g,
+        'Ie': I_e,
+        'Qe': Q_e,
+        'If': I_f,
+        'Qf': Q_f,
     }
-
 
     hist(
         data,
@@ -223,36 +222,3 @@ if __name__ == '__main__':
         title=None,
         export=False,
     )
-
-
-    # # 假設這些變數是由其他部分提供的
-    # expt_name = "Experiment"
-    # QubitIndex = 1
-    # DATA_PATH = "./data"  # 設置資料儲存目錄
-
-
-    # # 建立實驗名稱
-    # prefix = str(datetime.date.today())
-    # exp_name = f"{expt_name}_Q{QubitIndex}_{prefix}"
-    # print(f"Experiment name: {exp_name}")
-
-    # # 生成檔案名稱
-    # os.makedirs(DATA_PATH, exist_ok=True)
-    # fname = get_next_filename(DATA_PATH, exp_name, suffix='.h5')
-    # print(f"Current data file: {fname}")
-
-    # # 將數據儲存到 HDF5 文件中
-    # file_path = os.path.join(DATA_PATH, fname)
-    # with h5py.File(file_path, 'a') as f:
-    #     # 添加數據到文件
-    #     f.create_dataset('I_g', data=I_g)
-    #     f.create_dataset('Q_g', data=Q_g)
-    #     f.create_dataset('I_e', data=I_e)
-    #     f.create_dataset('Q_e', data=Q_e)
-    #     f.create_dataset('I_f', data=I_f)
-    #     f.create_dataset('Q_f', data=Q_f)
-
-    #     # 將配置保存為屬性
-    #     f.attrs['config'] = json.dumps(config)
-
-    # print(f"Data saved to: {file_path}")

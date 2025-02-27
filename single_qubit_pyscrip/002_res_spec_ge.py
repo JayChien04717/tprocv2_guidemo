@@ -79,9 +79,9 @@ amps = np.abs(iq_list[0][0].dot([1, 1j]))
 
 Plot = True
 if Plot:
-    # plt.plot(freqs,  iq_list[0][0].T[0])
+    plt.plot(freqs,  iq_list[0][0].T[0])
     plt.plot(freqs,  iq_list[0][0].T[1])
-    # plt.plot(freqs, amps)
+    plt.plot(freqs, amps)
     plt.show()
 
 #####################################

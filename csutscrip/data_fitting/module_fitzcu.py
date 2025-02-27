@@ -9,23 +9,9 @@ try:
     from . import resonator_tools
 except:
     print("No circle fit package")
+
 figsize = (8, 6)
-
-
-def NormalizeData(zval: float) -> float:
-    """Normalize function to normalize data
-
-    Parameters
-    ----------
-    zval : float
-        Input data
-
-    Returns
-    -------
-    float
-        Normalize data
-    """
-    return (zval - np.min(zval)) / (np.max(zval) - np.min(zval))
+marker_style = {'marker': 's', 'markersize': 5}
 
 
 def post_rotate(ydata):
@@ -64,7 +50,7 @@ def rsquare(y: float, ybar: float) -> float:
     return r_square
 
 
-def resonator_analyze(x: float, y: float) -> Optional[Dict]:
+def resonator_circlefit(x: float, y: float) -> Optional[Dict]:
     """Hanger geometry resonator circult fit
     This fitting tool is from https://github.com/sebastianprobst/resonator_tools
     Only for notch type hanger resonator
@@ -89,69 +75,100 @@ def resonator_analyze(x: float, y: float) -> Optional[Dict]:
     return
 
 
-def resonator_analyze2(x, y, fit: bool = True):
-    """Fitting function using asymmetric lorentzian function
+def resonator_analyze(x: np.ndarray, y: np.ndarray, fit: bool = True) -> Optional[float]:
+    """
+    Analyze the resonator spectrum by plotting amplitude and phase data.
+    Optionally, fit the data using an asymmetric Lorentzian function.
 
     Parameters
     ----------
-    x : _type_
-        frequncy list/array
-    y : _type_
-        S21 data
+    x : np.ndarray
+        Frequency list/array (in MHz).
+    y : np.ndarray
+        Complex S21 data.
     fit : bool, optional
-        If fitting is true, it will plot the fitting result. Or only plot input data
+        If True, fit the data using an asymmetric Lorentzian function.
+        Otherwise, only plot the raw data. Default is True.
 
     Returns
     -------
-    float :
-        return resonatnce frequency(MHz)
+    Optional[float]
+        Resonance frequency (MHz), rounded to two decimal places, or None if fitting is not performed.
     """
-    y = np.abs(y)
-    pOpt, pCov = fit_asym_lor(x, y)
-    res = pOpt[2]
 
-    plt.figure(figsize=figsize)
-    plt.title(f'mag.', fontsize=15)
-    plt.plot(x, y, label='mag', marker='o', markersize=3)
-    if fit == True:
-        plt.plot(x, asym_lorfunc(x, *pOpt), label=f'fit, $\kappa$={pOpt[3]}')
-    plt.axvline(res, color='r', ls='--', label=f'$f_res$ = {res:.2f}')
+    avg_abs = np.abs(y)
+    plt.figure(figsize=(15, 4))
+    plt.plot(x, avg_abs, label='meas', marker='o', markersize=4)
+    plt.xlabel("Frequency (MHz)")
+    plt.ylabel("Signal (a.u)")
+    plt.title("Amplitude")
+
+    res = None  # Initialize resonance frequency variable
+
+    if fit:
+        pOpt, _ = fit_asym_lor(x, avg_abs)  # Fit the data
+        res = pOpt[2]  # Extract resonance frequency
+
+        plt.plot(x, asym_lorfunc(x, *pOpt),
+                 label=f'Fit, $\kappa$={pOpt[3]:.2f} MHz')
+        plt.axvline(res, color='r', ls='--',
+                    label=f'$f_{{res}}$ = {res:.2f} MHz')
     plt.legend()
     plt.show()
-    return round(res, 2)
+
+    return round(res, 2) if res is not None else None
 
 
-def spectrum_analyze(x: float, y: float, fit: bool = True) -> float:
-    """Analyze the spectrum
-    This function is using lorentzian funtion
+def spectrum_analyze(x: np.ndarray, y: np.ndarray, fit: bool = True) -> Optional[float]:
+    """
+    Analyze the spectrum by plotting amplitude and phase data.
+    Optionally, fit the data using a Lorentzian function.
 
     Parameters
     ----------
-    x : float
-        frequency list/array
-    y : float
-        S21 data
+    x : np.ndarray
+        Frequency list/array (in MHz).
+    y : np.ndarray
+        Complex S21 data.
     fit : bool, optional
-        if fit is true, plot the fitting result, by default True
+        If True, fit the data using a Lorentzian function.
+        Otherwise, only plot the raw data. Default is True.
 
     Returns
     -------
-    float
-        return resonance frequency(MHz)
+    Optional[float]
+        Resonance frequency (MHz), rounded to two decimal places, or None if fitting is not performed.
     """
-    y = np.abs(y)
-    pOpt, pCov = fitlor(x, y)
-    res = pOpt[2]
 
-    plt.figure(figsize=figsize)
-    plt.title(f'mag.', fontsize=15)
-    plt.plot(x, y, label='mag', marker='o', markersize=3)
-    if fit == True:
-        plt.plot(x, lorfunc(x, *pOpt), label='fit')
-        plt.axvline(res, color='r', ls='--', label=f'$f_res$ = {res:.2f}')
-    plt.legend()
+    avg_abs: np.ndarray = np.abs(y)  # Compute amplitude
+    avg_angle: np.ndarray = np.angle(y)  # Compute phase
+
+    fig, axes = plt.subplots(1, 2, figsize=(15, 4))
+    fig.suptitle('Qubit Spectrum')
+
+    for i, data in enumerate([avg_abs, avg_angle]):
+        axes[i].plot(x, data, label='meas', marker='o', markersize=4)
+        axes[i].set_ylabel("Phase (rad)" if i == 1 else "Signal (a.u)")
+        axes[i].set_xlabel("Frequency (MHz)")
+        axes[i].set_title("IQ Phase (rad)" if i == 1 else "Amplitude")
+        axes[i].legend()
+
+    res: Optional[float] = None  # Initialize resonance frequency variable
+
+    if fit:
+        for i, data in enumerate([avg_abs, avg_angle]):
+            # Fit the data
+            pOpt, _ = fitlor(x, data)
+            res = pOpt[2]  # Extract resonance frequency
+
+            axes[i].plot(x, lorfunc(x, *pOpt), label='Fit')
+            axes[i].axvline(res, color='r', ls='--',
+                            label=f'$f_{{res}}$ = {res:.2f} MHz')
+            axes[i].legend()
+
     plt.show()
-    return round(res, 2)
+
+    return round(res, 2) if res is not None else None
 
 
 def dispersive_analyze(x: float, y1: float, y2: float, fit: bool = True):
@@ -197,6 +214,20 @@ def dispersive_analyze(x: float, y1: float, y2: float, fit: bool = True):
     plt.show()
 
 
+def pipulse_analyze(pOpt):
+    if pOpt[2] > 180:
+        pOpt[2] = pOpt[2] - 360
+    elif pOpt[2] < -180:
+        pOpt[2] = pOpt[2] + 360
+    if pOpt[2] < 0:
+        pi = (1/2 - pOpt[2]/180)/2/pOpt[1]
+        pi2 = (0 - pOpt[2]/180)/2/pOpt[1]
+    else:
+        pi = (3/2 - pOpt[2]/180)/2/pOpt[1]
+        pi2 = (1 - pOpt[2]/180)/2/pOpt[1]
+    return pi, pi2
+
+
 def amprabi_analyze(x: int, y: float, fit: bool = True, normalize: bool = False):
     """Analyze and fit the amplitude Rabi
 
@@ -216,47 +247,86 @@ def amprabi_analyze(x: int, y: float, fit: bool = True, normalize: bool = False)
     list
         return the pi pulse gain, pi/2 pulse gain and max value minus min value
     """
-    y = np.abs(y)
-    pOpt, pCov = fitdecaysin(x, y)
-    sim = decaysin(x, *pOpt)
 
-    pi = round(x[np.argmax(sim)], 1)
-    pi2 = round(x[round((np.argmin(sim) + np.argmax(sim))/2)], 1)
+    avg_abs: np.ndarray = np.abs(y)  # Compute amplitude
+    avg_angle: np.ndarray = np.angle(y)  # Compute phase
 
-    if pOpt[2] > 180:
-        pOpt[2] = pOpt[2] - 360
-    elif pOpt[2] < -180:
-        pOpt[2] = pOpt[2] + 360
-    if pOpt[2] < 0:
-        pi_gain = (1/2 - pOpt[2]/180)/2/pOpt[1]
-        pi2_gain = (0 - pOpt[2]/180)/2/pOpt[1]
-    else:
-        pi_gain = (3/2 - pOpt[2]/180)/2/pOpt[1]
-        pi2_gain = (1 - pOpt[2]/180)/2/pOpt[1]
+    fig, axes = plt.subplots(1, 2, figsize=(15, 4))
+    fig.suptitle('Amplitude Rabi')
 
-    plt.figure(figsize=figsize)
-    plt.plot(x, y, label='meas', ls='-', marker='o', markersize=3)
-    if fit == True:
-        plt.plot(x, sim, label='fit')
-    plt.title(f'Amplitude Rabi', fontsize=15)
-    plt.xlabel('$gain$', fontsize=15)
-    if normalize == True:
-        plt.ylabel('Population', fontsize=15)
-        plt.axvline(pi, ls='--', c='red', label=f'$\pi$ gain={pi}')
-        plt.axvline(pi2, ls='--', c='red', label=f'$\pi/2$ gain={pi2}')
-        plt.legend(loc=4)
-        plt.tight_layout()
-        plt.show()
-        return round(pi, 1), round(pi2, 1), max(y)-min(y)
-    else:
-        plt.axvline(pi_gain, ls='--', c='red',
-                    label=f'$\pi$ gain={pi_gain:.3f}')
-        plt.axvline(pi2_gain, ls='--', c='red',
-                    label=f'$\pi2$ gain={(pi2_gain):.3f}')
-        plt.legend(loc=4)
-        plt.tight_layout()
-        plt.show()
-        return round(pi_gain, 1), round(pi2_gain, 1), max(y)-min(y)
+    for i, data in enumerate([avg_abs, avg_angle]):
+        axes[i].plot(x, data, label='meas', marker='o', markersize=4)
+        axes[i].set_ylabel("Phase (rad)" if i == 1 else "Signal (a.u)")
+        axes[i].set_xlabel("Dac Gain (a.u)")
+        axes[i].set_title("IQ Phase (rad)" if i == 1 else "Amplitude")
+        axes[i].legend()
+
+    if fit:
+        for i, data in enumerate([avg_abs, avg_angle]):
+            # Fit the data
+            pOpt, _ = fitdecaysin(x, data)
+            pi_gain, pi2_gain = pipulse_analyze(pOpt)
+
+            axes[i].plot(x, decaysin(x, *pOpt), label='Fit')
+            axes[i].axvline(pi_gain, color='r', ls='--',
+                            label=f'pi gain = {pi_gain:.3f}')
+            axes[i].axvline(pi2_gain, color='r', ls='--',
+                            label=f'pi/2 gain = {pi2_gain:.3f}')
+            axes[i].legend()
+
+    plt.show()
+
+    return round(pi_gain, 3), round(pi2_gain, 3)
+
+
+def lengthrabi_analyze(x: float, y: float, fit: bool = True, normalize: bool = False):
+    """Analyze and fit the length Rabi data
+
+    Parameters
+    ----------
+    x : float
+        Rabi pulse length
+    y : float
+        Rabi data
+    fit : bool, optional
+        If fit is true, plot the fitting data, by default True
+    normalize : bool, optional
+        If normalize is true, normalize the data, by default False
+
+    Returns
+    -------
+    List
+        return the pi pulse legnth, pi/2 pulse length and max value minus min value
+    """
+    avg_abs: np.ndarray = np.abs(y)  # Compute amplitude
+    avg_angle: np.ndarray = np.angle(y)  # Compute phase
+
+    fig, axes = plt.subplots(1, 2, figsize=(15, 4))
+    fig.suptitle('Time Rabi')
+
+    for i, data in enumerate([avg_abs, avg_angle]):
+        axes[i].plot(x, data, label='meas', marker='o', markersize=4)
+        axes[i].set_ylabel("Phase (rad)" if i == 1 else "Signal (a.u)")
+        axes[i].set_xlabel("Pulse length (us)")
+        axes[i].set_title("IQ Phase (rad)" if i == 1 else "Amplitude")
+        axes[i].legend()
+
+    if fit:
+        for i, data in enumerate([avg_abs, avg_angle]):
+            # Fit the data
+            pOpt, _ = fitdecaysin(x, data)
+            pi_len, pi2_len = pipulse_analyze(pOpt)
+
+            axes[i].plot(x, decaysin(x, *pOpt), label='Fit')
+            axes[i].axvline(pi_len, color='r', ls='--',
+                            label=f'pi length = {pi_len:.3f} us')
+            axes[i].axvline(pi2_len, color='r', ls='--',
+                            label=f'pi/2 length = {pi2_len:.3f}us')
+            axes[i].legend()
+
+    plt.show()
+
+    return round(pi_len, 3), round(pi2_len, 3)
 
 
 def rabichevron(x, y, data):
@@ -299,67 +369,6 @@ def rabichevron(x, y, data):
     return round(pi_gain, 2), round(pi2_gain, 2)
 
 
-def lengthrabi_analyze(x: float, y: float, fit: bool = True, normalize: bool = False):
-    """Analyze and fit the length Rabi data
-
-    Parameters
-    ----------
-    x : float
-        Rabi pulse length
-    y : float
-        Rabi data
-    fit : bool, optional
-        If fit is true, plot the fitting data, by default True
-    normalize : bool, optional
-        If normalize is true, normalize the data, by default False
-
-    Returns
-    -------
-    List
-        return the pi pulse legnth, pi/2 pulse length and max value minus min value
-    """
-    y = np.abs(y)
-    pOpt, pCov = fitdecaysin(x, y)
-    sim = decaysin(x, *pOpt)
-
-    pi = round(x[np.argmax(sim)], 1)
-    pi2 = round(x[round((np.argmin(sim) + np.argmax(sim))/2)], 1)
-    if pOpt[2] > 180:
-        pOpt[2] = pOpt[2] - 360
-    elif pOpt[2] < -180:
-        p[2] = pOpt[2] + 360
-    if pOpt[2] < 0:
-        pi_length = (1/2 - pOpt[2]/180)/2/pOpt[1]
-        pi2_length = (0 - pOpt[2]/180)/2/pOpt[1]
-    else:
-        pi_length = (3/2 - pOpt[2]/180)/2/pOpt[1]
-        pi2_length = (1 - pOpt[2]/180)/2/pOpt[1]
-
-    plt.figure(figsize=figsize)
-    plt.plot(x, y, label='meas', ls='-', marker='o', markersize=3)
-    if fit == True:
-        plt.plot(x, sim, label='fit')
-    plt.title(f'Length Rabi freq = {pOpt[1]:.0f} MHz', fontsize=15)
-    plt.xlabel('$t\ (us)$', fontsize=15)
-    if normalize == True:
-        plt.ylabel('Population', fontsize=15)
-        plt.axvline(pi, ls='--', c='red', label=f'$\pi$ len={pi}')
-        plt.axvline(pi2, ls='--', c='red', label=f'$\pi/2$ len={pi2}')
-        plt.legend()
-        plt.tight_layout()
-        plt.show()
-        return pi, pi2
-    else:
-        plt.axvline(pi_length, ls='--', c='red',
-                    label=f'$\pi$ length={pi_length:.3f}$\mu$s')
-        plt.axvline(pi2_length, ls='--', c='red',
-                    label=f'$\pi/2$ length={pi2_length:.3f}$\mu$s')
-        plt.legend()
-        plt.tight_layout()
-        plt.show()
-        return pi_length, pi2_length
-
-
 def T1_analyze(x: float, y: float, fit: bool = True, normalize: bool = False):
     """T1 relaxation analyze
 
@@ -374,21 +383,35 @@ def T1_analyze(x: float, y: float, fit: bool = True, normalize: bool = False):
     normalize : bool, optional
         If normalize is true, normalize the data, by default False
     """
-    y = np.abs(y)
-    pOpt, pCov = fitexp(x, y)
-    sim = expfunc(x, *pOpt)
+    avg_abs: np.ndarray = np.abs(y)  # Compute amplitude
+    avg_angle: np.ndarray = np.angle(y)  # Compute phase
+
+    fig, axes = plt.subplots(1, 2, figsize=(15, 4))
+    fig.suptitle('Qubit Spectrum')
+
+    for i, data in enumerate([avg_abs, avg_angle]):
+        axes[i].plot(x, data, label='meas', marker='o', markersize=4)
+        axes[i].set_ylabel("Phase (rad)" if i == 1 else "Signal (a.u)")
+        axes[i].set_title("IQ Phase (rad)" if i == 1 else "Amplitude")
+        axes[i].legend()
+
+    res: Optional[float] = None  # Initialize resonance frequency variable
+
+    if fit:
+        for i, data in enumerate([avg_abs, avg_angle]):
+            # Fit the data
+            pOpt, _ = fitexp(x, data)
+
+            axes[i].plot(x, lorfunc(x, *pOpt), label='Fit')
+            axes[i].title(f'T1 = {pOpt[3]:.2f}$\mu s$', fontsize=15)
+            axes[i].legend()
+
+    plt.show()
 
     plt.figure(figsize=figsize)
     plt.plot(x, y, label='meas', ls='-', marker='o', markersize=3)
-    if fit == True:
-        plt.plot(x, sim, label='fit')
     plt.title(f'T1 = {pOpt[3]:.2f}$\mu s$', fontsize=15)
     plt.xlabel('$t\ (\mu s)$', fontsize=15)
-    if normalize == True:
-        plt.ylabel('Population', fontsize=15)
-    plt.legend()
-    plt.tight_layout()
-    plt.show()
 
 
 def T2fring_analyze(x: float, y: float, fit: bool = True, normalize: bool = False):
@@ -463,36 +486,36 @@ def T2decay_analyze(x: float, y: float, fit: bool = True, normalize: bool = Fals
     plt.show()
 
 
-def hist(data, plot=True, span=None, verbose=True, title=None, fid_avg=False, b_print=False, b_plot=False):
+def hist(data, plot=True, span=None, verbose=True, title=None, fid_avg=False, plot_f=False, b_print=False, b_plot=False):
     """
     span: histogram limit is the mean +/- span
-    fid_avg: if True, calculate fidelity F by the average mis-categorized e/g; otherwise count
+    fid_avg: if True, calculate fidelity F by the average mis-categorized e/g, ; otherwise count
         total number of miscategorized over total counts (gives F^2)
     """
-    Ig = data[0]
-    Qg = data[1]
-    Ie = data[2]
-    Qe = data[3]
+    Ig = data["Ig"]
+    Qg = data["Qg"]
+    Ie = data["Ie"]
+    Qe = data["Qe"]
     plot_f = False
-    # if 'If' in data.keys():
-    #     plot_f = True
-    #     If = data[4]
-    #     Qf = data[5]
+    if 'If' in data.keys():
+        plot_f = True
+        If = data["If"]
+        Qf = data["Qf"]
 
     numbins = 200
 
     xg, yg = np.median(Ig), np.median(Qg)
     xe, ye = np.median(Ie), np.median(Qe)
-    # if plot_f:
-    #     xf, yf = np.median(If), np.median(Qf)
+    if plot_f:
+        xf, yf = np.median(If), np.median(Qf)
 
     if verbose:
         print('Unrotated:')
         print(f'Ig {xg} +/- {np.std(Ig)} \t Qg {yg} +/- {np.std(Qg)} \t Amp g {np.abs(xg+1j*yg)} +/- {np.std(np.abs(Ig + 1j*Qg))}')
         print(f'Ie {xe} +/- {np.std(Ie)} \t Qe {ye} +/- {np.std(Qe)} \t Amp e {np.abs(xe+1j*ye)} +/- {np.std(np.abs(Ig + 1j*Qe))}')
-        # if plot_f:
-        #     print(
-        #         f'If {xf} +/- {np.std(If)} \t Qf {yf} +/- {np.std(Qf)} \t Amp f {np.abs(xf+1j*yf)}')
+        if plot_f:
+            print(
+                f'If {xf} +/- {np.std(If)} \t Qf {yf} +/- {np.std(Qf)} \t Amp f {np.abs(xf+1j*yf)}')
 
     if plot:
         fig, axs = plt.subplots(nrows=2, ncols=2, figsize=(8, 6))
@@ -515,7 +538,7 @@ def hist(data, plot=True, span=None, verbose=True, title=None, fid_avg=False, b_
             axs[0, 0].plot([xf], [yf], color='k', linestyle=':',
                            marker='o', markerfacecolor='g', markersize=5)
 
-        # axs[0,0].set_xlabel('I [ADC levels]')
+        axs[0, 0].set_xlabel('I [ADC levels]')
         axs[0, 0].set_ylabel('Q [ADC levels]')
         axs[0, 0].legend(loc='upper right')
         axs[0, 0].set_title('Unrotated', fontsize=14)
@@ -567,22 +590,22 @@ def hist(data, plot=True, span=None, verbose=True, title=None, fid_avg=False, b_
     Ie_new = Ie*np.cos(theta) - Qe*np.sin(theta)
     Qe_new = Ie*np.sin(theta) + Qe*np.cos(theta)
 
-    # if plot_f:
-    #     If_new = If*np.cos(theta) - Qf*np.sin(theta)
-    #     Qf_new = If*np.sin(theta) + Qf*np.cos(theta)
+    if plot_f:
+        If_new = If*np.cos(theta) - Qf*np.sin(theta)
+        Qf_new = If*np.sin(theta) + Qf*np.cos(theta)
 
     """New means of each blob"""
     xg, yg = np.median(Ig_new), np.median(Qg_new)
     xe, ye = np.median(Ie_new), np.median(Qe_new)
-    # if plot_f:
-    #     xf, yf = np.median(If_new), np.median(Qf_new)
+    if plot_f:
+        xf, yf = np.median(If_new), np.median(Qf_new)
     if verbose:
         print('Rotated:')
         print(f'Ig {xg} +/- {np.std(Ig)} \t Qg {yg} +/- {np.std(Qg)} \t Amp g {np.abs(xg+1j*yg)} +/- {np.std(np.abs(Ig + 1j*Qg))}')
         print(f'Ie {xe} +/- {np.std(Ie)} \t Qe {ye} +/- {np.std(Qe)} \t Amp e {np.abs(xe+1j*ye)} +/- {np.std(np.abs(Ig + 1j*Qe))}')
-        # if plot_f:
-        #     print(
-        #         f'If {xf} +/- {np.std(If)} \t Qf {yf} +/- {np.std(Qf)} \t Amp f {np.abs(xf+1j*yf)}')
+        if plot_f:
+            print(
+                f'If {xf} +/- {np.std(If)} \t Qf {yf} +/- {np.std(Qf)} \t Amp f {np.abs(xf+1j*yf)}')
 
     if span is None:
         span = (np.max(np.concatenate((Ie_new, Ig_new))) -
@@ -594,18 +617,18 @@ def hist(data, plot=True, span=None, verbose=True, title=None, fid_avg=False, b_
                           marker='.', edgecolor='None', alpha=0.3)
         axs[0, 1].scatter(Ie_new, Qe_new, label='e', color='r',
                           marker='.', edgecolor='None', alpha=0.3)
-        # if plot_f:
-        #     axs[0, 1].scatter(If_new, Qf_new, label='f', color='g',
-        #                       marker='.', edgecolor='None', alpha=0.3)
+        if plot_f:
+            axs[0, 1].scatter(If_new, Qf_new, label='f', color='g',
+                              marker='.', edgecolor='None', alpha=0.3)
         axs[0, 1].plot([xg], [yg], color='k', linestyle=':',
                        marker='o', markerfacecolor='b', markersize=5)
         axs[0, 1].plot([xe], [ye], color='k', linestyle=':',
                        marker='o', markerfacecolor='r', markersize=5)
-        # if plot_f:
-        #     axs[0, 1].plot([xf], [yf], color='k', linestyle=':',
-        #                    marker='o', markerfacecolor='g', markersize=5)
+        if plot_f:
+            axs[0, 1].plot([xf], [yf], color='k', linestyle=':',
+                           marker='o', markerfacecolor='g', markersize=5)
 
-        # axs[0,1].set_xlabel('I [ADC levels]')
+        axs[0, 1].set_xlabel('I [ADC levels]')
         axs[0, 1].legend(loc='upper right')
         axs[0, 1].set_title('Rotated', fontsize=14)
         axs[0, 1].axis('equal')
@@ -616,9 +639,9 @@ def hist(data, plot=True, span=None, verbose=True, title=None, fid_avg=False, b_
             Ig_new, bins=numbins, range=xlims, color='b', label='g', alpha=0.5)
         ne, binse, pe = axs[1, 0].hist(
             Ie_new, bins=numbins, range=xlims, color='r', label='e', alpha=0.5)
-        # if plot_f:
-        #     nf, binsf, pf = axs[1, 0].hist(
-        #         If_new, bins=numbins, range=xlims, color='g', label='f', alpha=0.5)
+        if plot_f:
+            nf, binsf, pf = axs[1, 0].hist(
+                If_new, bins=numbins, range=xlims, color='g', label='f', alpha=0.5)
         axs[1, 0].set_ylabel('Counts', fontsize=14)
         axs[1, 0].set_xlabel('I [ADC levels]', fontsize=14)
         axs[1, 0].legend(loc='upper right')
@@ -626,8 +649,8 @@ def hist(data, plot=True, span=None, verbose=True, title=None, fid_avg=False, b_
     else:
         ng, binsg = np.histogram(Ig_new, bins=numbins, range=xlims)
         ne, binse = np.histogram(Ie_new, bins=numbins, range=xlims)
-        # if plot_f:
-        #     nf, binsf = np.histogram(If_new, bins=numbins, range=xlims)
+        if plot_f:
+            nf, binsf = np.histogram(If_new, bins=numbins, range=xlims)
 
     """fitting the shot gaussian"""
     # poptg, _ = fitdualgauss(binsg[:-1], ng)
