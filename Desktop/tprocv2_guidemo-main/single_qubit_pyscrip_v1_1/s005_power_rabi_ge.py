@@ -11,8 +11,11 @@ from tqdm.auto import tqdm
 from .system_cfg import *
 from .system_cfg import DATA_PATH
 from .system_tool import  get_next_filename_labber, hdf5_generator
-from .module_fitzcu import amprabi_analyze
+from .module_fitzcu import amprabi_analyze, post_rotate, pipulse_analyze
+from .fitting import decaysin, fitdecaysin
+from .yamltool import yml_comment
 from IPython.display import display, clear_output
+
 ##################
 # Define Program #
 ##################
@@ -25,7 +28,11 @@ class AmplitudeRabiProgram(AveragerProgramV2):
         qubit_ch = cfg['qubit_ch']
 
         self.declare_gen(ch=res_ch, nqz=cfg['nqz_res'])
-        self.declare_gen(ch=qubit_ch, nqz=cfg['nqz_qubit'])
+
+        if self.soccfg['gens'][qubit_ch]['type']=='axis_sg_int4_v2':
+            self.declare_gen(ch=qubit_ch, nqz=cfg['nqz_qubit'], mixer_freq=cfg['qmixer_freq'])
+        else:
+            self.declare_gen(ch=qubit_ch, nqz=cfg['nqz_qubit'])
         # pynq configured
         # self.declare_readout(ch=ro_ch, length=cfg['ro_len'], freq=cfg['f_res'], gen_ch=res_ch)
 
@@ -67,16 +74,20 @@ class Amp_Rabi:
         self.soccfg = soccfg
         self.cfg = config
 
-    def run(self, py_avg):
-        prog = AmplitudeRabiProgram(
-            self.soccfg, reps=self.cfg['reps'], final_delay=self.cfg['relax_delay'], cfg=self.cfg)
-        self.iq_list = prog.acquire(self.soc, soft_avgs=py_avg, progress=True)
-        self.iq_list[0][0].dot([1,1j])
-        self.gains = prog.get_pulse_param('qubit_pulse', "gain", as_array=True)
+    def run(self, py_avg, liveplot=False):
+        if liveplot:
+            self.liveplot(py_avg)
+        else:
+            prog = AmplitudeRabiProgram(
+                self.soccfg, reps=self.cfg['reps'], final_delay=self.cfg['relax_delay'], cfg=self.cfg)
+            iq_list = prog.acquire(self.soc, soft_avgs=py_avg, progress=True)
+            self.iqdata = iq_list[0][0].dot([1,1j])
+            self.gains = prog.get_pulse_param('qubit_pulse', "gain", as_array=True)
 
     def plot(self):
-        pi_gain, pi2_gain = amprabi_analyze(self.gains, self.iq_list[0][0].dot([1,1j]))
+        pi_gain, pi2_gain = amprabi_analyze(self.gains, self.iqdata)
         return pi_gain, pi2_gain
+
     def liveplot(self, py_avg):
         iq = 0
 
@@ -91,10 +102,10 @@ class Amp_Rabi:
 
             iq_data = self.iq_list[0][0].dot([1,1j])
             iq = iq_data if avg == 0 else iq + iq_data
-            iq_avg = iq / (avg + 1)
+            self.iqdata = iq / (avg + 1)
 
             ax.cla()
-            ax.plot(self.gains, np.abs(iq_avg), **marker_style)
+            ax.plot(self.gains, np.abs(self.iqdata), **marker_style)
             ax.set_title(f'average: {avg+1} / {py_avg}')
             ax.set_xlabel('Gain (Dac unit)')
             ax.set_ylabel('Signal (ADC unit)')
@@ -102,21 +113,53 @@ class Amp_Rabi:
             clear_output(wait=True)
             display(fig)
 
-        plt.close(fig)
+        clear_output(wait=True)
+        ax.set_title(f'Power Rabi')
+        ax.plot(self.gains, np.abs(post_rotate(self.iqdata)), **marker_style)
+        pOpt, _ = fitdecaysin(self.gains, np.abs(post_rotate(self.iqdata)))
+        pi_gain, pi2_gain = pipulse_analyze(pOpt)
+        ax.plot(self.gains, decaysin(self.gains, *pOpt), label='Fit')
+        ax.axvline(pi_gain, color='r', ls='--',
+                        label=f'pi gain = {pi_gain:.3f}')
+        ax.axvline(pi2_gain, color='r', ls='--',
+                        label=f'pi2 gain = {pi2_gain:.3f}')
+        ax.legend()
+        self.sim =decaysin(self.gains, *pOpt)
 
-    def saveLabber(self, qb_idx):
+
+    def saveLabber(self, qb_idx, yoko_current=None, save_sim=False):
         expt_name = "005_power_rabi_ge" + f"_Q{qb_idx}"
-        file_path = get_next_filename_labber(DATA_PATH, expt_name)
+        file_path = get_next_filename_labber(DATA_PATH, expt_name, yoko_current)
+        try:
+            self.cfg.pop('qubit_gain_ge')
+        except:
+            pass
 
-        hdf5_generator(
-                filepath=file_path,
-                x_info={'name': 'Gain', 'unit': "DAC unit",
-                        'values': self.gains},
-                z_info={'name': 'Signal', 'unit': 'ADC unit',
-                        'values':  self.iq_list[0][0].dot([1,1j])},
-                comment=(),
-                tag= 'Rabi'
-        )
+        dict_val = yml_comment(self.cfg)
+
+        if save_sim:
+            hdf5_generator(
+                    filepath=file_path,
+                    x_info={'name': 'Gain', 'unit': "DAC unit",
+                            'values': self.gains},
+                    y_info={'name': 'simulate', 'unit': "None",
+                            'values': np.array([0,1])},
+                    z_info={'name': 'Signal', 'unit': 'ADC unit',
+                            'values':  np.array([self.iqdata, self.sim])},
+                    comment=(f'{dict_val}'),
+                    tag= 'Rabi'
+            )
+        else:
+            hdf5_generator(
+                    filepath=file_path,
+                    x_info={'name': 'Gain', 'unit': "DAC unit",
+                            'values': self.gains},
+                    z_info={'name': 'Signal', 'unit': 'ADC unit',
+                            'values':  self.iqdata},
+                    comment=(f'{dict_val}'),
+                    tag= 'Rabi'
+            )
+
 
         print(f'Data save to {file_path}')
 

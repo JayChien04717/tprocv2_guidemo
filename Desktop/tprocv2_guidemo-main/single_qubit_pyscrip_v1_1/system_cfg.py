@@ -1,4 +1,16 @@
+from qick import *
+from qick.pyro import make_proxy
+from qick import QickConfig
+import Pyro4
+Pyro4.config.SERIALIZER = "pickle"
+Pyro4.config.PICKLE_PROTOCOL_VERSION = 4
 
+ns_host = "192.168.10.212"
+ns_port = 8888
+proxy_name = "myqick"
+
+soc, soccfg = make_proxy(ns_host=ns_host, ns_port=ns_port, proxy_name=proxy_name)
+print(soccfg)
 # Where do you want to save data
 DATA_PATH = r"C:\Users\QEL\Desktop\2DQ12\test"
 
@@ -7,7 +19,7 @@ QubitIndex = 0
 hw_cfg = {
     # DAC
     "res_ch": [0]*6,  # Single Tone Readout Port, Full-speed DAC
-    "qubit_ch": [2]*6,  # Qubit Channel Port, Full-speed DAC
+    "qubit_ch": [14, 2, 2, 7, 2, 2],  # Qubit Channel Port, Full-speed DAC
     "qubit_ch_ef": [2]*6,  # Qubit ef Channel, Full-speed DAC
     "mux_ch": 12,
     "nqz_qubit": 2,
@@ -25,7 +37,7 @@ readout_cfg = {
     "mixer_freq": 5600,  # [MHz] - used for mux_ch and interpolated_ch
 
     # Changes related to the resonator output channel
-    "res_freq_ge": [5352.79, 5494.19, 5667.69, 5796.46, 5917.51, 6051.89],  # [MHzx]
+    "res_freq_ge": [5352.79, 5494.19, 5667.69, 5797.46, 5917.51, 6051.89],  # [MHzx]
     "res_gain_ge": [0.1, 0.1, 0.1, 0.1, 0.1, 0.1],  # [DAC units]
     "res_freq_ef": [5000, 5100, 5200, 5300, 5400, 5500],  # [MHz]
     "res_gain_ef": [0.05, 0.05, 0.05, 0.05, 0.05, 0.05],  # [DAC units]
@@ -42,11 +54,12 @@ qubit_cfg = {
     "qubit_gain_ge": [0.1, 0.1, 0.1, 0.1, 0.1],
     "qubit_length_ge": 5,  # [us] for Constant Pulse
     "qubit_pi_gain_ge": [0.1, 0.1, 0.1, 0.1, 0.1],
-    "qubit_p2_gain_ge": [0.1, 0.1, 0.1, 0.1, 0.1],
+    "qubit_pi2_gain_ge": [0.1, 0.1, 0.1, 0.1, 0.1],
     # [MHz] Freqs of Qubit e/f Transition
     "qubit_freq_ef": [4000, 4000, 4000, 4000, 4000, 4000],
     "qubit_gain_ef": [0.0891, 0.086, 0.03, 0.03, 0.03, 0.1],
     "qubit_length_ef": 25.0,  # [us] for Constant Pulse
+    "qmixer_freq":[4000, 4000, 4000, 4000, 4000, 4000],
     "qubit_phase": 0,  # [deg]
     # [us] for Gaussian Pulse
     "sigma": [0.1/5, 0.1/5, 0.1/5, 0.1/5, 0.1/5, .1/5],

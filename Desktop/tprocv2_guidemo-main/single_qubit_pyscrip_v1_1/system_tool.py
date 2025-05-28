@@ -10,12 +10,14 @@ import Labber
 
 def hdf5_generator(
         filepath: str,
-        x_info:dict, z_info:dict,
-        y_info:dict = None, comment = None, tag = None):
+        x_info:dict, z_info:dict,y_info:dict = None, 
+
+        comment = None, tag = None):
     np.float=float
     np.bool=bool
     zdata = z_info['values']
     z_info.update({'complex': True, 'vector': False})
+
     log_channels = [z_info]
     step_channels = list(filter(None, [x_info, y_info]))
 
@@ -95,32 +97,17 @@ def update_python_dict(file_path: str, updates: Dict[str, Union[Any, Dict[int, A
         f.writelines(new_lines)
 
 
-def select_config_idx(*configs: Dict[str, Any], idx: Optional[int] = None) -> Dict[str, Any]:
-    """
-    Given multiple configuration dictionaries where values may be lists, select a specific index if applicable.
-
-    Args:
-        *configs (Dict[str, Any]): One or more configuration dictionaries.
-        idx (Optional[int]): The index to select from list values. If None, keeps the entire list.
-
-    Returns:
-        Dict[str, Any]: A merged dictionary with selected values.
-    """
-    def process_config(config: Dict[str, Any]) -> Dict[str, Any]:
-        selected_config = {}
-        for key, value in config.items():
-            if isinstance(value, list):
-                selected_config[key] = value if idx is None else (
-                    value[idx] if idx < len(value) else value[0])
+def select_config_idx(config: dict, idx: int) -> dict:
+    selected = {}
+    for key, value in config.items():
+        if isinstance(value, list):
+            if idx < len(value):
+                selected[key] = value[idx]
             else:
-                selected_config[key] = value
-        return selected_config
-
-    merged_config = {}
-    for config in configs:
-        merged_config.update(process_config(config))
-
-    return merged_config
+                raise IndexError(f"Index {idx} out of range for key '{key}'")
+        else:
+            selected[key] = value
+    return selected
 
 
 def get_next_filename(base_path: str, exp_name: str, suffix: str = ".h5") -> str:
@@ -152,7 +139,7 @@ def get_next_filename(base_path: str, exp_name: str, suffix: str = ".h5") -> str
         i += 1
 
 
-def get_next_filename_labber(dest_path: str, exp_name: str) -> str:
+def get_next_filename_labber(dest_path: str, exp_name: str, yoko_current:str=None) -> str:
     # make sure dest_path is absolute path
     dest_path = os.path.abspath(dest_path)
     yy, mm, dd = datetime.datetime.today().strftime('%Y-%m-%d').split('-')
@@ -163,8 +150,10 @@ def get_next_filename_labber(dest_path: str, exp_name: str) -> str:
         rf"{re.escape(exp_name)}_\d+\.hdf5", f)]
     next_index = max([int(re.search(r"_(\d+)", f).group(1))
                      for f in existing_files], default=0) + 1
-
-    return os.path.join(save_path, f"{exp_name}_{next_index}")
+    if yoko_current is not None:
+        return os.path.join(save_path, f"{exp_name}_{yoko_current}mA")
+    else:
+        return os.path.join(save_path, f"{exp_name}_{next_index}")
 
 
 def saveh5(file_path: str, data_dict: Dict[str, Any], config: Optional[Dict[str, Any]] = None, result: Optional[Dict[str, Any]] = None) -> None:

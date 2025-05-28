@@ -15,7 +15,6 @@ yml.default_flow_style = False
 yml.preserve_quotes = True
 yml.explicit_start = True
 
-
 def read_yml(data_pth, verbose=False):
     with open(data_pth, 'r') as file:
         config = yml.load(file)

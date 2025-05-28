@@ -11,7 +11,9 @@ from tqdm.auto import tqdm
 from .system_cfg import *
 from .system_cfg import DATA_PATH
 from .system_tool import  get_next_filename_labber, hdf5_generator
-from .module_fitzcu import T2fring_analyze
+from .module_fitzcu import T2fring_analyze, post_rotate
+from .fitting import fitdecaysin, decaysin
+from .yamltool import yml_comment
 from IPython.display import display, clear_output
 ##################
 # Define Program #
@@ -24,7 +26,10 @@ class RamseyProgram(AveragerProgramV2):
         qubit_ch = cfg['qubit_ch']
 
         self.declare_gen(ch=res_ch, nqz=cfg['nqz_res'])
-        self.declare_gen(ch=qubit_ch, nqz=cfg['nqz_qubit'])
+        if self.soccfg['gens'][qubit_ch]['type']=='axis_sg_int4_v2':
+            self.declare_gen(ch=qubit_ch, nqz=cfg['nqz_qubit'], mixer_freq=cfg['qmixer_freq'])
+        else:
+            self.declare_gen(ch=qubit_ch, nqz=cfg['nqz_qubit'])
         # pynq configured
         # self.declare_readout(ch=ro_ch, length=cfg['ro_len'], freq=cfg['f_res'], gen_ch=res_ch)
 
@@ -78,22 +83,27 @@ class Ramsey:
         self.soccfg = soccfg
         self.cfg = config
 
-    def run(self, py_avg):
-        prog = RamseyProgram(
-            self.soccfg, reps=self.cfg['reps'], final_delay=self.cfg['relax_delay'], cfg=self.cfg)
-        self.iq_list = prog.acquire(self.soc, soft_avgs=py_avg, progress=True)
-        self.iq_list[0][0].dot([1,1j])
-        self.delay_times = prog.get_time_param('wait', "t", as_array=True)
+    def run(self, py_avg, liveplot=False):
+        if liveplot:
+            self.liveplot(py_avg)
+        else:
+            prog = RamseyProgram(
+                self.soccfg, reps=self.cfg['reps'], final_delay=self.cfg['relax_delay'], cfg=self.cfg)
+            self.iq_list = prog.acquire(self.soc, soft_avgs=py_avg, progress=True)
+            self.iqdata = self.iq_list[0][0].dot([1,1j])
+            self.delay_times = prog.get_time_param('wait', "t", as_array=True)
 
     def plot(self):
-        self.t2r = T2fring_analyze(self.delay_times, self.iq_list[0][0].dot([1,1j]), prefix='Ramsey')
+        self.t2r = T2fring_analyze(self.delay_times, self.iqdata, prefix='Ramsey')
 
     def correct_detune(self):
-        if abs(self.t2r[1]-self.cfg['ramsey_freq'])>0.2:
+        if abs(self.t2r[1]-self.cfg['ramsey_freq'])>0.005:
             self.cfg['qubit_freq_ge'] = self.cfg['qubit_freq_ge']-round((self.t2r[1]-self.cfg['ramsey_freq']),2)
-            print(f'over detune {round((self.t2r[1]-self.cfg["ramsey_freq"]),2)}')
+            print(f'over detune {round((self.t2r[1]-self.cfg["ramsey_freq"]),5)}MHz')
+            return round(self.cfg['qubit_freq_ge'],5)
         else:
-            pass
+            self.cfg['qubit_freq_ge']
+            print('Detune < 5kHz')
 
     def liveplot(self, py_avg):
         iq = 0
@@ -109,10 +119,10 @@ class Ramsey:
 
             iq_data = self.iq_list[0][0].dot([1,1j])
             iq = iq_data if avg == 0 else iq + iq_data
-            iq_avg = iq / (avg + 1)
+            self.iqdata = iq / (avg + 1)
 
             ax.cla()
-            ax.plot(self.delay_times, np.abs(iq_avg), **marker_style)
+            ax.plot(self.delay_times, np.abs(self.iqdata), **marker_style)
             ax.set_title(f'average: {avg+1} / {py_avg}')
             ax.set_xlabel('Times (us)')
             ax.set_ylabel('Signal (ADC unit)')
@@ -120,21 +130,48 @@ class Ramsey:
             clear_output(wait=True)
             display(fig)
 
-        plt.close(fig)
+        clear_output(wait=True)
 
-    def saveLabber(self, qb_idx):
+        ax.plot(self.delay_times, np.abs(post_rotate(self.iqdata)), **marker_style)
+        self.t2r, pCov = fitdecaysin(self.delay_times, np.abs(post_rotate(self.iqdata)))
+        error = np.sqrt(np.diag(pCov))
+        ax.plot(self.delay_times, decaysin(self.delay_times, *self.t2r), label='Fit')
+        ax.set_title(f'T2 Ramsey = {self.t2r[3]:.2f}$\mu s, detune = {self.t2r[1]:.5f}MHz \pm {(error[1])*1e3:.3f}kHz$', fontsize=15)
+        ax.legend()
+        self.sim = decaysin(self.delay_times, *self.t2r)
+
+    def saveLabber(self, qb_idx, yoko_current=None, save_sim=False):
         expt_name = "006_Ramsey_ge" + f"_Q{qb_idx}"
-        file_path = get_next_filename_labber(DATA_PATH, expt_name)
+        file_path = get_next_filename_labber(DATA_PATH, expt_name, yoko_current)
+        try:
+            self.cfg.pop('wait_time')
+        except:
+            pass
 
-        hdf5_generator(
-                filepath=file_path,
-                x_info={'name': 'Times', 'unit': "us",
-                        'values': self.delay_times},
-                z_info={'name': 'Signal', 'unit': 'ADC unit',
-                        'values':  self.iq_list[0][0].dot([1,1j])},
-                comment=(),
-                tag= 'Ramsey'
-        )
+        dict_val = yml_comment(self.cfg)
+
+        if save_sim:
+            hdf5_generator(
+                    filepath=file_path,
+                    x_info={'name': 'Times', 'unit': "us",
+                            'values': self.delay_times},
+                    y_info={'name': 'simulate', 'unit': "None",
+                            'values': np.array([0,1])},
+                    z_info={'name': 'Signal', 'unit': 'ADC unit',
+                            'values':  np.array([self.iqdata, self.sim])},
+                    comment=(f'{dict_val}'),
+                    tag= 'Ramsey'
+            )
+        else:
+            hdf5_generator(
+                    filepath=file_path,
+                    x_info={'name': 'Times', 'unit': "us",
+                            'values': self.delay_times},
+                    z_info={'name': 'Signal', 'unit': 'ADC unit',
+                            'values':  self.iqdata},
+                    comment=(f'{dict_val}'),
+                    tag= 'Ramsey'
+            )
 
         print(f'Data save to {file_path}')
 

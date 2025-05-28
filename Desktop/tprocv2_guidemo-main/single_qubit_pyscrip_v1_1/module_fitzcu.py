@@ -70,7 +70,7 @@ def resonator_circlefit(x: float, y: float, solve_type:str='hm') -> Optional[Dic
     fit = analyze(x*1e6, y, solve_type, fit_edelay=True)
     fit.plot()
     param = fit.tolist()
-    result_dict={'Fres(GHz)': round(param[0],3), 
+    result_dict={'Fres(GHz)': round(param[0]/1e9, 4), 
                  'Qi': round((param[0]/(param[1] - param[2]))),
                  'absQc': round(param[0]/param[2]),
                  'Ql': round(param[0]/param[1]), 
@@ -120,7 +120,7 @@ def resonator_analyze(x: np.ndarray, y: np.ndarray, fit: bool = True) -> Optiona
                     label=f'$f_{{res}}$ = {res:.2f} MHz')
     plt.legend()
 
-    return round(res, 2) if res is not None else None
+    return round(res, 4) if res is not None else None
 
 
 def spectrum_analyze(x: np.ndarray, y: np.ndarray, fit: bool = True) -> Optional[float]:
@@ -163,7 +163,7 @@ def spectrum_analyze(x: np.ndarray, y: np.ndarray, fit: bool = True) -> Optional
                         label=f'$f_{{res}}$ = {res:.2f} MHz')
         plt.legend()
 
-    return round(res, 2) if res is not None else None
+    return round(res, 4) if res is not None else None
 
 
 def dispersive_analyze(x: float, y1: float, y2: float, fit: bool = True):
@@ -276,7 +276,7 @@ def amprabi_analyze(x: int, y: float, fit: bool = True, normalize: bool = False,
     if debug:
         return pOpt, pCov
     else:
-        return round(pi_gain, 3), round(pi2_gain, 3)
+        return round(pi_gain, 4), round(pi2_gain, 4)
 
 
 def lengthrabi_analyze(x: float, y: float, fit: bool = True, normalize: bool = False):
@@ -361,7 +361,7 @@ def rabichevron(x, y, data):
     plt.legend()
     plt.xlabel('$gain$', fontsize=15)
     plt.tight_layout()
-    return round(pi_gain, 2), round(pi2_gain, 2)
+    return round(pi_gain, 4), round(pi2_gain, 4)
 
 
 def T1_analyze(x: float, y: float, fit: bool = True, normalize: bool = False, debug= False):
@@ -433,7 +433,7 @@ def T2fring_analyze(x: float, y: float, fit: bool = True, normalize: bool = Fals
         plt.plot(x, sim, label='fit')
         plt.plot(x, pOpt[0]*np.exp(-x / pOpt[3]) + pOpt[4])
     plt.title(
-        f'T2 {prefix} = {pOpt[3]:.2f}$\mu s, detune = {pOpt[1]:.2f}MHz \pm {(error[1])*1e3:.2f}kHz$', fontsize=15)
+        f'T2 {prefix} = {pOpt[3]:.2f}$\mu s, detune = {pOpt[1]:.5f}MHz \pm {(error[1])*1e3:.3f}kHz$', fontsize=15)
     plt.xlabel('$t\ (\mu s)$', fontsize=15)
     if normalize:
         plt.ylabel('Population', fontsize=15)
@@ -443,7 +443,7 @@ def T2fring_analyze(x: float, y: float, fit: bool = True, normalize: bool = Fals
     return pOpt
 
 
-def T2decay_analyze(x: float, y: float, fit: bool = True, normalize: bool = False):
+def T2decay_analyze(x: float, y: float, fit: bool = True, normalize: bool = False, prefix=None):
     """_summary_
 
     Parameters
@@ -469,7 +469,7 @@ def T2decay_analyze(x: float, y: float, fit: bool = True, normalize: bool = Fals
     plt.plot(x, y, label='meas', **marker_style)
     if fit == True:
         plt.plot(x, sim, label='fit')
-    plt.title(f'$T2 decay = {pOpt[3]:.2f} \pm {p_sigma[3]:.2f}\mu s$', fontsize=15)
+    plt.title(f'$T2 {prefix} = {pOpt[3]:.2f} \pm {p_sigma[3]:.2f}\mu s$', fontsize=15)
     plt.xlabel('$t\ (\mu s)$', fontsize=15)
     if normalize == True:
         plt.ylabel('Population', fontsize=15)
