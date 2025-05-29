@@ -133,22 +133,13 @@ class T1:
 
         dict_val = yml_comment(self.cfg)
         if save_sim:
-            # hdf5_generator(
-            #         filepath=file_path,
-            #         x_info={'name': 'Times', 'unit': "us",
-            #                 'values': self.delay_times},
-            #         # y_info={'name': 'simulate', 'unit': "None",
-            #         #         'values': np.array([0,1])},
-            #         z_info={'name': 'Signal', 'unit': 'ADC unit','values':  np.array([self.iqdata, self.sim])},
-            #         comment=(f'{dict_val}'),
-            #         tag= 'T1'
-            # )
             hdf5_generator(
                     filepath=file_path,
                     x_info={'name': 'Times', 'unit': "us",
                             'values': self.delay_times},
-                    z_info={'name': 'Signal', 'unit': 'ADC unit','values': self.iqdata},
-                    simulation=self.sim,
+                    # y_info={'name': 'simulate', 'unit': "None",
+                    #         'values': np.array([0,1])},
+                    z_info={'name': 'Signal', 'unit': 'ADC unit','values':  np.array([self.iqdata, self.sim])},
                     comment=(f'{dict_val}'),
                     tag= 'T1'
             )

@@ -1,25 +1,20 @@
-# %%
 # ----- Qick package ----- #
 from qick import *
 from qick.pyro import make_proxy
-# for now, all the tProc v2 classes need to be individually imported (can't use qick.*)
-# the main program class
 from qick.asm_v2 import AveragerProgramV2
-# for defining sweeps
 from qick.asm_v2 import QickSpan, QickSweep1D
 # ----- Library ----- #
 import matplotlib.pyplot as plt
 import numpy as np
-import datetime
-from system_cfg import *
-from system_tool import select_config_idx, saveh5, get_next_filename
-from pprint import pprint
-# ----- Experiment configurations ----- #
-expt_name = "009_res_spec_ef"
-QubitIndex = 2
-Qubit = 'Q' + str(QubitIndex)
-config = select_config_idx(
-    hw_cfg, readout_cfg, qubit_cfg, expt_cfg, idx=QubitIndex)
+from tqdm.auto import tqdm
+# ----- User Library ----- #
+from .system_cfg import *
+from .system_cfg import DATA_PATH
+from .system_tool import  get_next_filename_labber, hdf5_generator
+from .module_fitzcu import resonator_circlefit, resonator_analyze, post_rotate
+from .fitting import fit_asym_lor, asym_lorfunc
+from .yamltool import yml_comment
+from IPython.display import display, clear_output
 
 
 ##################
@@ -33,9 +28,14 @@ class SingleToneSpectroscopyProgram(AveragerProgramV2):
         qubit_ch = cfg['qubit_ch']
 
         self.declare_gen(ch=res_ch, nqz=cfg['nqz_res'])
-        self.declare_gen(ch=qubit_ch, nqz=cfg['nqz_qubit'])
-
         self.declare_readout(ch=ro_ch, length=cfg['ro_length'])
+
+        if self.soccfg['gens'][qubit_ch]['type']=='axis_sg_int4_v2':
+            self.declare_gen(ch=qubit_ch, nqz=cfg['nqz_qubit'], mixer_freq=cfg['qmixer_freq'])
+        else:
+            self.declare_gen(ch=qubit_ch, nqz=cfg['nqz_qubit'])
+
+
 
         self.add_loop("freqloop", cfg["steps"])
         self.add_readoutconfig(ch=ro_ch, name="myro",
@@ -66,64 +66,156 @@ class SingleToneSpectroscopyProgram(AveragerProgramV2):
         self.pulse(ch=cfg['res_ch'], name="res_pulse", t=0)
         self.trigger(ros=[cfg['ro_ch']], pins=[0], t=cfg['trig_time'])
 
+class Resonator_onetone_ef:
+    def __init__(self, soc, soccfg, config):
+        self.soc = soc
+        self.soccfg = soccfg
+        self.cfg = config
 
-###################
-# Experiment sweep parameter
-###################
+    def run(self, py_avg, liveplot=False):
+        if liveplot:
+            return self.liveplot(py_avg)
 
-START_FREQ = 4000  # [MHz]
-STOP_FREQ = 5000  # [MHz]
-STEPS = 101
-config.update([('steps', STEPS), ('res_freq_ef',
-              QickSweep1D('freqloop', START_FREQ, STOP_FREQ))])
+        else:
+            prog = SingleToneSpectroscopyProgram(
+                self.soccfg, reps=self.cfg['reps'], final_delay=self.cfg['relax_delay'], cfg=self.cfg)
 
-###################
-# Run the Program
-###################
+            iq_list = prog.acquire(self.soc, soft_avgs=py_avg, progress=True)
+            self.iqdata = iq_list[0][0].dot([1, 1j])
+            self.freqs = prog.get_pulse_param("res_pulse", "freq", as_array=True)
 
-prog = SingleToneSpectroscopyProgram(
-    soccfg, reps=config['reps'], final_delay=config['relax_delay'], cfg=config)
-py_avg = config['py_avg']
-iq_list = prog.acquire(soc, soft_avgs=py_avg, progress=True)
-freqs = prog.get_pulse_param("res_pulse", "freq", as_array=True)
-amps = np.abs(iq_list[0][0].dot([1, 1j]))
+    def plot(self):
+        param = resonator_analyze(self.freqs, self.iqdata )
+        return param
+    
+    def plot_circle(self):
+        param = resonator_circlefit(self.freqs, self.iqdata )
+        return param
+    
+    def liveplot(self, py_avg):
+        iq = 0
+        prog = SingleToneSpectroscopyProgram(
+            self.soccfg, reps=self.cfg['reps'], final_delay=self.cfg['relax_delay'], cfg=self.cfg)
+        self.freqs = prog.get_pulse_param("res_pulse", "freq", as_array=True)
 
-###################
-# Plot
-###################
+        marker_style = {'marker': 'o', 'markersize': 5, 'alpha':0.7, 'linestyle': '-',}
+        fig, ax = plt.subplots(figsize=(6, 4))
 
-Plot = True
-if Plot:
-    # plt.plot(freqs,  iq_list[0][0].T[0])
-    # plt.plot(freqs,  iq_list[0][0].T[1])
-    plt.plot(freqs, amps)
-    plt.show()
+        for i in tqdm(range(py_avg), desc='average count'):
+            self.iq_list = prog.acquire(self.soc, soft_avgs=1, progress=False)
+            iq_data = self.iq_list[0][0].dot([1, 1j])
+            iq = iq_data if i == 0 else iq + iq_data
+            self.iqdata = iq / (i + 1)
 
-#####################################
-# ----- Saves data to a file ----- #
-#####################################
 
-Save = True
-if Save:
-    data_path = "./data"
-    labber_data = "./data/Labber"
-    exp_name = expt_name + '_Q' + str(QubitIndex)
-    print('Experiment name: ' + exp_name)
-    file_path = get_next_filename(data_path, exp_name, suffix='.h5')
-    print('Current data file: ' + file_path)
+            ax.cla()
+            ax.plot(self.freqs, np.abs(post_rotate(self.iqdata)), **marker_style)
+            ax.set_title(f'average: {i+1} / {py_avg}')
+            ax.set_xlabel('Frequency (MHz)')
+            ax.set_ylabel('ADC unist')
+            ax.grid(True)
+            clear_output(wait=True)
+            display(fig)
+        clear_output(wait=True)
+        plt.close(fig)
 
-    data_dict = {
-        "x_name": "Frequency(MHz)",
-        "x_value": freqs,
+        pOpt, _ = fit_asym_lor(self.freqs, np.abs(post_rotate(self.iqdata)))  # Fit the data
+        param = resonator_circlefit(self.freqs, self.iqdata)
+        self.sim = asym_lorfunc(self.freqs, *pOpt)
+        return param
 
-        "z_name": "iq_list",
-        "z_value": iq_list[0][0].dot([1, 1j])
-    }
 
-    result = {
-        "T1": "350us",
-        "T2": "130us"
-    }
+    def saveLabber(self, qb_idx, yoko_current=None, save_sim=False):
+        expt_name = "s009_onetone_ef" + f"_Q{qb_idx}"
+        file_path = get_next_filename_labber(DATA_PATH, expt_name, yoko_current)
+        try:
+            self.cfg.pop('res_freq_ef')
+        except:
+            pass
+        
+        dict_val = yml_comment(self.cfg)
 
-    saveh5(file_path, data_dict, result)
-# %%
+        if save_sim:
+            hdf5_generator(
+                    filepath=file_path,
+                    x_info={'name': 'Frequency', 'unit': "Hz",
+                            'values': self.freqs*1e6},
+                    y_info={'name': 'simulate', 'unit': "None",
+                            'values': np.array([0,1])},
+                    z_info={'name': 'Signal', 'unit': 'ADC unit',
+                            'values':  np.array([self.iqdata, self.sim])},
+                    comment=(f'{dict_val}'),
+                    tag= 'OneTone'
+            )
+        else:
+            hdf5_generator(
+                    filepath=file_path,
+                    x_info={'name': 'Frequency', 'unit': "Hz",
+                            'values': self.freqs*1e6},
+                    z_info={'name': 'Signal', 'unit': 'ADC unit',
+                            'values':  self.iqdata},
+                    comment=(),
+                    tag= 'OneTone'
+            )
+        print(f'Data save to {file_path}')
+
+if __name__=="__main__":
+    ###################
+    # Experiment sweep parameter
+    ###################
+
+    START_FREQ = 4000  # [MHz]
+    STOP_FREQ = 5000  # [MHz]
+    STEPS = 101
+    config.update([('steps', STEPS), ('res_freq_ef',
+                QickSweep1D('freqloop', START_FREQ, STOP_FREQ))])
+
+    ###################
+    # Run the Program
+    ###################
+
+    prog = SingleToneSpectroscopyProgram(
+        soccfg, reps=config['reps'], final_delay=config['relax_delay'], cfg=config)
+    py_avg = config['py_avg']
+    iq_list = prog.acquire(soc, soft_avgs=py_avg, progress=True)
+    freqs = prog.get_pulse_param("res_pulse", "freq", as_array=True)
+    amps = np.abs(iq_list[0][0].dot([1, 1j]))
+
+    ###################
+    # Plot
+    ###################
+
+    Plot = True
+    if Plot:
+        # plt.plot(freqs,  iq_list[0][0].T[0])
+        # plt.plot(freqs,  iq_list[0][0].T[1])
+        plt.plot(freqs, amps)
+        plt.show()
+
+    #####################################
+    # ----- Saves data to a file ----- #
+    #####################################
+
+    Save = True
+    if Save:
+        data_path = "./data"
+        labber_data = "./data/Labber"
+        exp_name = expt_name + '_Q' + str(QubitIndex)
+        print('Experiment name: ' + exp_name)
+        file_path = get_next_filename(data_path, exp_name, suffix='.h5')
+        print('Current data file: ' + file_path)
+
+        data_dict = {
+            "x_name": "Frequency(MHz)",
+            "x_value": freqs,
+
+            "z_name": "iq_list",
+            "z_value": iq_list[0][0].dot([1, 1j])
+        }
+
+        result = {
+            "T1": "350us",
+            "T2": "130us"
+        }
+
+        saveh5(file_path, data_dict, result)

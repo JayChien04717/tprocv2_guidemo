@@ -102,8 +102,8 @@ class Ramsey:
             print(f'over detune {round((self.t2r[1]-self.cfg["ramsey_freq"]),5)}MHz')
             return round(self.cfg['qubit_freq_ge'],5)
         else:
-            self.cfg['qubit_freq_ge']
             print('Detune < 5kHz')
+            return self.cfg['qubit_freq_ge']
 
     def liveplot(self, py_avg):
         iq = 0
@@ -122,7 +122,7 @@ class Ramsey:
             self.iqdata = iq / (avg + 1)
 
             ax.cla()
-            ax.plot(self.delay_times, np.abs(self.iqdata), **marker_style)
+            ax.plot(self.delay_times, np.abs(post_rotate(self.iqdata)), **marker_style)
             ax.set_title(f'average: {avg+1} / {py_avg}')
             ax.set_xlabel('Times (us)')
             ax.set_ylabel('Signal (ADC unit)')

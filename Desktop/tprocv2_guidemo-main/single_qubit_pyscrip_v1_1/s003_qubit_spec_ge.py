@@ -72,7 +72,7 @@ class Qubit_Twotone:
 
     def run(self, py_avg, liveplot=False):
         if liveplot:
-            self.liveplot(py_avg)
+            return self.liveplot(py_avg)
         else:
             prog = PulseProbeSpectroscopyProgram(
                 self.soccfg, reps=self.cfg['reps'], final_delay=self.cfg['relax_delay'], cfg=self.cfg)

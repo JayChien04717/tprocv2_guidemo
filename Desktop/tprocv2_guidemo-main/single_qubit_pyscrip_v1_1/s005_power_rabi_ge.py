@@ -76,7 +76,7 @@ class Amp_Rabi:
 
     def run(self, py_avg, liveplot=False):
         if liveplot:
-            self.liveplot(py_avg)
+            return self.liveplot(py_avg)
         else:
             prog = AmplitudeRabiProgram(
                 self.soccfg, reps=self.cfg['reps'], final_delay=self.cfg['relax_delay'], cfg=self.cfg)
@@ -105,7 +105,7 @@ class Amp_Rabi:
             self.iqdata = iq / (avg + 1)
 
             ax.cla()
-            ax.plot(self.gains, np.abs(self.iqdata), **marker_style)
+            ax.plot(self.gains, np.abs(post_rotate(self.iqdata)), **marker_style)
             ax.set_title(f'average: {avg+1} / {py_avg}')
             ax.set_xlabel('Gain (Dac unit)')
             ax.set_ylabel('Signal (ADC unit)')
@@ -125,7 +125,7 @@ class Amp_Rabi:
                         label=f'pi2 gain = {pi2_gain:.3f}')
         ax.legend()
         self.sim =decaysin(self.gains, *pOpt)
-
+        return pi_gain, pi2_gain
 
     def saveLabber(self, qb_idx, yoko_current=None, save_sim=False):
         expt_name = "005_power_rabi_ge" + f"_Q{qb_idx}"

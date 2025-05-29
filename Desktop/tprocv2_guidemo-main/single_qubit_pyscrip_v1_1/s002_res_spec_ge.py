@@ -69,7 +69,7 @@ class Resonator_onetone:
         return param
     
     def plot_circle(self):
-        param = resonator_circlefit(self.freqs, self.iqdata )
+        param = resonator_circlefit(self.freqs, self.iqdata)
         return param
     
     def liveplot(self, py_avg):
@@ -97,16 +97,12 @@ class Resonator_onetone:
             clear_output(wait=True)
             display(fig)
         clear_output(wait=True)
-        ax.plot(self.freqs, np.abs(post_rotate(self.iqdata)), **marker_style)
-        pOpt, _ = fit_asym_lor(self.freqs, np.abs(post_rotate(self.iqdata)))  # Fit the data
-        res = pOpt[2]  # Extract resonance frequency
+        plt.close(fig)
 
-        plt.plot(self.freqs, asym_lorfunc(self.freqs, *pOpt),
-                 label=f'Fit, $\kappa$={pOpt[3]:.2f} MHz')
-        plt.axvline(res, color='r', ls='--',
-                    label=f'$f_{{res}}$ = {res:.2f} MHz')
+        pOpt, _ = fit_asym_lor(self.freqs, np.abs(post_rotate(self.iqdata)))  # Fit the data
+        param = resonator_circlefit(self.freqs, self.iqdata)
         self.sim = asym_lorfunc(self.freqs, *pOpt)
-        return res
+        return param
 
     def saveLabber(self, qb_idx, yoko_current=None, save_sim=False):
         expt_name = "s002_onetone" + f"_Q{qb_idx}"

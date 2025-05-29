@@ -60,6 +60,7 @@ qubit_cfg = {
     "qubit_gain_ef": [0.0891, 0.086, 0.03, 0.03, 0.03, 0.1],
     "qubit_length_ef": 25.0,  # [us] for Constant Pulse
     "qmixer_freq":[4000, 4000, 4000, 4000, 4000, 4000],
+    "qmixer_freq_ef":[4000, 4000, 4000, 4000, 4000, 4000],
     "qubit_phase": 0,  # [deg]
     # [us] for Gaussian Pulse
     "sigma": [0.1/5, 0.1/5, 0.1/5, 0.1/5, 0.1/5, .1/5],
