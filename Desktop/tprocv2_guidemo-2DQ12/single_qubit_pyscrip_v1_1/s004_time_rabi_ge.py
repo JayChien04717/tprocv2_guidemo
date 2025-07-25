@@ -130,7 +130,7 @@ class Time_Rabi:
             ax.set_title(f"average: {avg + 1} / {py_avg}")
             ax.set_xlabel("Time (us)")
             ax.set_ylabel("ADC unit")
-            ax.grid(True)
+
             clear_output(wait=True)
             display(fig)
 

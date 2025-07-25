@@ -45,22 +45,36 @@ class PulseProbeSpectroscopyProgram(AveragerProgramV2):
             ch=ro_ch, name="myro", freq=cfg["res_freq_ge"], gen_ch=res_ch
         )
 
+        self.add_gauss(
+            ch=res_ch,
+            name="readout",
+            sigma=cfg["res_sigma"],
+            length=5 * cfg["res_sigma"],
+            even_length=True,
+        )
         self.add_pulse(
             ch=res_ch,
             name="res_pulse",
             ro_ch=ro_ch,
-            style="const",
+            style="flat_top",
+            envelope="readout",
             length=cfg["res_length"],
             freq=cfg["res_freq_ge"],
             phase=cfg["res_phase"],
             gain=cfg["res_gain_ge"],
         )
-
+        self.add_gauss(
+            ch=qubit_ch,
+            name="quibit",
+            sigma=cfg["sigma"],
+            length=5 * cfg["sigma"],
+            even_length=True,
+        )
         self.add_pulse(
             ch=qubit_ch,
             name="qubit_pulse",
-            ro_ch=ro_ch,
-            style="const",
+            style="flat_top",
+            envelope="quibit",
             length=cfg["qubit_length_ge"],
             freq=cfg["qubit_freq_ge"],
             phase=0,
@@ -83,20 +97,35 @@ class PulseProbeSpectroscopyProgram(AveragerProgramV2):
             )
         else:
             self.declare_gen(ch=cool_ch2, nqz=cfg["nqz_cool_ch2"])
-
+        self.add_gauss(
+            ch=cool_ch1,
+            name="cooling1",
+            sigma=0.004,
+            length=0.004 * 5,
+            even_length=True,
+        )
         self.add_pulse(
             ch=cool_ch1,
             name="cool_pulse1",
-            style="const",
+            envelope="cooling1",
+            style="flat_top",
             length=cfg["cool_length"],
             freq=cfg["cool_freq_1"],
             phase=0,
             gain=cfg["cool_gain_1"],
         )
+        self.add_gauss(
+            ch=cool_ch2,
+            name="cooling2",
+            sigma=0.004,
+            length=0.004 * 5,
+            even_length=True,
+        )
         self.add_pulse(
             ch=cool_ch2,
             name="cool_pulse2",
-            style="const",
+            envelope="cooling2",
+            style="flat_top",
             length=cfg["cool_length"],
             freq=cfg["cool_freq_2"],
             phase=0,
@@ -143,12 +172,92 @@ class Qubit_Twotone_Flux:
         f_q = spectrum_analyze(self.freqs, self.iqdata)
         return f_q
 
-    def liveplot_yoko(self, py_avg, yoko_currnet: np.ndarray, yoko_inst: str = None):
+    # def liveplot_yoko(
+    #     self,
+    #     py_avg,
+    #     yoko_value: np.ndarray,
+    #     yoko_inst: str = None,
+    #     mode: str = "current",
+    # ):
+    #     from .YOKOGS200 import YOKOGS200
+    #     import pyvisa
+
+    #     rm = pyvisa.ResourceManager()
+    #     yoko = YOKOGS200(yoko_inst, rm)
+    #     fig, ax = plt.subplots(figsize=(6, 4))
+    #     prog = PulseProbeSpectroscopyProgram(
+    #         self.soccfg,
+    #         reps=self.cfg["reps"],
+    #         final_delay=self.cfg["relax_delay"],
+    #         cfg=self.cfg,
+    #     )
+    #     self.freqs = prog.get_pulse_param("qubit_pulse", "freq", as_array=True)
+    #     self.iqdata = np.zeros((len(yoko_value), len(self.freqs)))
+    #     self.yoko_currnet = yoko_value
+    #     mesh = ax.pcolormesh(
+    #         yoko_value * 1e3,
+    #         self.freqs,
+    #         self.iqdata.T,  # transpose: pcolormesh expects (Y, X)
+    #         shading="nearest",
+    #     )
+
+    #     ax.set_ylabel("Frequency (MHz)")
+    #     for idx, curr in tqdm(enumerate(yoko_value)):
+    #         if mode == "current":
+    #             yoko.SetMode("current")
+    #             yoko.SetCurrent(curr)
+    #             ax.set_title(
+    #                 f"Qubit Twotone Current ={curr * 1e3:.3f}mA : {idx + 1}/{len(yoko_value)}"
+    #             )
+    #             ax.set_xlabel("Current (mA)")
+    #         elif mode == "voltage":
+    #             yoko.SetMode("voltage")
+    #             yoko.SetVoltage(curr)
+    #             ax.set_title(
+    #                 f"Qubit Twotone Voltage ={curr * 1e3:.3f}mV : {idx + 1}/{len(yoko_value)}"
+    #             )
+    #             ax.set_xlabel("Voltage (mV)")
+
+    #         # iq_list = prog.acquire(self.soc, rounds=py_avg, progress=False)
+    #         # iq = iq_list[0][0].dot([1, 1j])
+    #         # self.iqdata[idx, :] = np.abs(iq)
+    #         # mesh.set_array(self.iqdata.T.ravel())
+    #         # mesh.set_clim(vmin=np.min(self.iqdata), vmax=np.max(self.iqdata))
+
+    #         iq_list = prog.acquire(self.soc, rounds=py_avg, progress=False)
+    #         iq = iq_list[0][0].dot([1, 1j])
+    #         iq_abs = np.abs(iq)
+    #         iq_abs /= np.max(iq_abs) if np.max(iq_abs) != 0 else 1.0  # normalize
+    #         self.iqdata[idx, :] = iq_abs
+    #         mesh.set_array(self.iqdata.T.ravel())
+    #         mesh.set_clim(vmin=0, vmax=1)
+
+    #         clear_output(wait=True)
+    #         display(fig)
+
+    #     clear_output(wait=True)
+    #     ax.pcolormesh(yoko_value * 1e3, self.freqs, self.iqdata.T, shading="nearest")
+    #     ax.set_title("Qubit Twotone Flux")
+
+    def liveplot_yoko(
+        self,
+        py_avg,
+        yoko_value: np.ndarray,
+        yoko_inst: str = None,
+        mode: str = "current",
+        normalize: bool = True,
+    ):
         from .YOKOGS200 import YOKOGS200
         import pyvisa
+        import time
+        import matplotlib.pyplot as plt
+        from IPython.display import clear_output, display
+        from tqdm.notebook import tqdm
+        import numpy as np
 
         rm = pyvisa.ResourceManager()
         yoko = YOKOGS200(yoko_inst, rm)
+
         fig, ax = plt.subplots(figsize=(6, 4))
         prog = PulseProbeSpectroscopyProgram(
             self.soccfg,
@@ -157,34 +266,69 @@ class Qubit_Twotone_Flux:
             cfg=self.cfg,
         )
         self.freqs = prog.get_pulse_param("qubit_pulse", "freq", as_array=True)
-        self.iqdata = np.zeros((len(yoko_currnet), len(self.freqs)))
-        self.yoko_currnet = yoko_currnet
+        self.iqdata = np.zeros((len(yoko_value), len(self.freqs)))
+        self.yoko_currnet = yoko_value
+
         mesh = ax.pcolormesh(
-            yoko_currnet * 1e3,
+            yoko_value * 1e3,
             self.freqs,
-            self.iqdata.T,  # transpose: pcolormesh expects (Y, X)
+            self.iqdata.T,
             shading="nearest",
+            cmap="viridis",
+            vmin=0,
+            vmax=1 if normalize else None,
         )
-
+        cbar = fig.colorbar(
+            mesh, ax=ax, label="Normalized Signal" if normalize else "Signal (a.u.)"
+        )
         ax.set_ylabel("Frequency (MHz)")
-        ax.set_xlabel("Current (mA)")
+        ax.set_xlabel("Current (mA)" if mode == "current" else "Voltage (mV)")
 
-        for idx, curr in tqdm(enumerate(yoko_currnet)):
-            yoko.SetCurrent(curr)
+        for idx, curr in tqdm(enumerate(yoko_value)):
+            # 設定 YOKO 輸出
+            if mode == "current":
+                yoko.SetMode("current")
+                yoko.SetCurrent(curr)
+                title_str = f"Qubit Twotone Current = {curr * 1e3:.3f} mA : {idx + 1}/{len(yoko_value)}"
+            elif mode == "voltage":
+                yoko.SetMode("voltage")
+                yoko.SetVoltage(curr)
+                title_str = f"Qubit Twotone Voltage = {curr * 1e3:.3f} mV : {idx + 1}/{len(yoko_value)}"
+
+            time.sleep(0.1)  # 等待穩定
+
             iq_list = prog.acquire(self.soc, rounds=py_avg, progress=False)
             iq = iq_list[0][0].dot([1, 1j])
-            self.iqdata[idx, :] = np.abs(iq)
+            iq_abs = np.abs(iq)
+
+            if normalize:
+                max_val = np.max(iq_abs)
+                iq_abs /= max_val if max_val > 1e-12 else 1.0  # 避免除以 0
+
+            self.iqdata[idx, :] = iq_abs
             mesh.set_array(self.iqdata.T.ravel())
-            mesh.set_clim(vmin=np.min(self.iqdata), vmax=np.max(self.iqdata))
-            ax.set_title(
-                f"Qubit Flux spec current ={curr * 1e3:.3f}mA : {idx + 1}/{len(yoko_currnet)}"
-            )
+            mesh.set_clim(vmin=0, vmax=1 if normalize else np.max(self.iqdata))
+
+            ax.set_title(title_str)
+
             clear_output(wait=True)
             display(fig)
 
+        # 顯示最終圖
         clear_output(wait=True)
-        ax.pcolormesh(yoko_currnet * 1e3, self.freqs, self.iqdata.T, shading="nearest")
+        ax.pcolormesh(
+            yoko_value * 1e3,
+            self.freqs,
+            self.iqdata.T,
+            shading="nearest",
+            cmap="viridis",
+            vmin=0,
+            vmax=1 if normalize else np.max(self.iqdata),
+        )
         ax.set_title("Qubit Twotone Flux")
+        ax.set_xlabel("Current (mA)" if mode == "current" else "Voltage (mV)")
+        ax.set_ylabel("Frequency (MHz)")
+        display(fig)
 
     def saveLabber(self, qb_idx, yoko_current=None, save_sim=False):
         expt_name = "003_qubit_spec_ge" + f"_Q{qb_idx}"

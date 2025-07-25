@@ -182,7 +182,7 @@ class Resonator_onetone_ef:
             ax.set_title(f"average: {i + 1} / {py_avg}")
             ax.set_xlabel("Frequency (MHz)")
             ax.set_ylabel("ADC unist")
-            ax.grid(True)
+
             clear_output(wait=True)
             display(fig)
         clear_output(wait=True)

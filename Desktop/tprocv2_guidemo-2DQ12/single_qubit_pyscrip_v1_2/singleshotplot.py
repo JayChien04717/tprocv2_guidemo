@@ -2,7 +2,7 @@ from itertools import cycle
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy.integrate import quad
-import data_fitting.fitting as fitter
+import fitting as fitter
 
 # Use np.hist and plt.plot to accomplish plt.hist with less memory usage
 default_colors = plt.rcParams["axes.prop_cycle"].by_key()["color"]
@@ -38,7 +38,6 @@ def plot_hist(
             label=label,
             alpha=alpha,
             linewidth=0.9,
-
         )
         if i < len(hist_data) - 1:
             ax.plot(
@@ -48,7 +47,6 @@ def plot_hist(
                 linestyle=linestyle,
                 alpha=alpha,
                 linewidth=0.9,
-
             )
     ax.relim()
     ax.set_ylim((0, None))
@@ -123,14 +121,10 @@ def general_hist(
             theta = -np.arctan2((ye - yg), (xe - xg))
         else:
             theta *= np.pi / 180
-        Ig_tot_tot_new = Ig_tot_tot * \
-            np.cos(theta) - Qg_tot_tot * np.sin(theta)
-        Qg_tot_tot_new = Ig_tot_tot * \
-            np.sin(theta) + Qg_tot_tot * np.cos(theta)
-        Ie_tot_tot_new = Ie_tot_tot * \
-            np.cos(theta) - Qe_tot_tot * np.sin(theta)
-        Qe_tot_tot_new = Ie_tot_tot * \
-            np.sin(theta) + Qe_tot_tot * np.cos(theta)
+        Ig_tot_tot_new = Ig_tot_tot * np.cos(theta) - Qg_tot_tot * np.sin(theta)
+        Qg_tot_tot_new = Ig_tot_tot * np.sin(theta) + Qg_tot_tot * np.cos(theta)
+        Ie_tot_tot_new = Ie_tot_tot * np.cos(theta) - Qe_tot_tot * np.sin(theta)
+        Qe_tot_tot_new = Ie_tot_tot * np.sin(theta) + Qe_tot_tot * np.cos(theta)
         I_tot_tot_new = np.concatenate((Ie_tot_tot_new, Ig_tot_tot_new))
         span = (np.max(I_tot_tot_new) - np.min(I_tot_tot_new)) / 2
         midpoint = (np.max(I_tot_tot_new) + np.min(I_tot_tot_new)) / 2
@@ -146,8 +140,9 @@ def general_hist(
     if plot:
         fig, axs = plt.subplots(nrows=2, ncols=2, figsize=(9, 6))
         if title is None:
-            title = f"Readout Fidelity" + \
-                (f" on Q{check_qubit_label}" if check_qubit_label is not None else "")
+            title = f"Readout Fidelity" + (
+                f" on Q{check_qubit_label}" if check_qubit_label is not None else ""
+            )
         fig.suptitle(title)
         fig.tight_layout()
         axs[0, 0].set_ylabel("Q [ADC levels]", fontsize=11)
@@ -200,10 +195,11 @@ def general_hist(
             print(state_label, "unrotated averages:")
             if not amplitude_mode:
                 print(
-                    f"I {xavg} +/- {np.std(I)} \t Q {yavg} +/- {np.std(Q)} \t Amp {amp_avg} +/- {np.std(amp)}")
+                    f"I {xavg} +/- {np.std(I)} \t Q {yavg} +/- {np.std(Q)} \t Amp {amp_avg} +/- {np.std(amp)}"
+                )
                 print(f"Rotated (theta={theta}):")
                 print(
-                    f"I {xavg_new} +/- {np.std(I_new)} \t Q {yavg_new} +/- {np.std(Q_new)} \t Amp {np.abs(xavg_new+1j*yavg_new)} +/- {np.std(amp)}"
+                    f"I {xavg_new} +/- {np.std(I_new)} \t Q {yavg_new} +/- {np.std(Q_new)} \t Amp {np.abs(xavg_new + 1j * yavg_new)} +/- {np.std(amp)}"
                 )
             else:
                 print(f"Amps {amp_avg} +/- {np.std(amp)}")
@@ -277,7 +273,8 @@ def general_hist(
 
         else:  # just getting the n, bins for data processing
             n, bins = np.histogram(
-                I_new if not amplitude_mode else amp, bins=numbins, range=xlims)
+                I_new if not amplitude_mode else amp, bins=numbins, range=xlims
+            )
 
         if check_i in g_states:
             n_tot_g += n
@@ -315,7 +312,8 @@ def general_hist(
             amp = np.abs(I_new + 1j * Q_new)
 
             n, bins = np.histogram(
-                I_new if not amplitude_mode else amp, bins=numbins, range=xlims)
+                I_new if not amplitude_mode else amp, bins=numbins, range=xlims
+            )
 
             idx_g = np.argmin(np.abs(bins[:-1] - xmax_g))
             idx_e = np.argmin(np.abs(bins[:-1] - xmax_e))
@@ -324,7 +322,8 @@ def general_hist(
             fitparams = [ymax_g, xmax_g, 5, ymax_e, xmax_e, 5]
 
             popt, pcov = fitter.fit_doublegauss(
-                xdata=bins[:-1], ydata=n, fitparams=fitparams)
+                xdata=bins[:-1], ydata=n, fitparams=fitparams
+            )
 
             if plot:
                 y = fitter.double_gaussian(bins[:-1], *popt)
@@ -336,19 +335,19 @@ def general_hist(
                     "-",
                     color=default_colors[check_i % len(default_colors)],
                 )
+
                 def gaussian_norm(x, b, c):
                     a = 1 / (np.sqrt(2 * np.pi) * c)
-                    return a * np.exp(-((x - b) ** 2) / (2 * c ** 2))
+                    return a * np.exp(-((x - b) ** 2) / (2 * c**2))
 
                 def overlap_area_norm(b1, c1, b2, c2):
                     def min_func(x):
                         return np.minimum(
-                            gaussian_norm(x, b1, c1),
-                            gaussian_norm(x, b2, c2)
+                            gaussian_norm(x, b1, c1), gaussian_norm(x, b2, c2)
                         )
 
-                    x_min = min(b1 - 5*c1, b2 - 5*c2)
-                    x_max = max(b1 + 5*c1, b2 + 5*c2)
+                    x_min = min(b1 - 5 * c1, b2 - 5 * c2)
+                    x_max = max(b1 + 5 * c1, b2 + 5 * c2)
                     area, _ = quad(min_func, x_min, x_max)
                     return area
 
@@ -359,7 +358,6 @@ def general_hist(
                 _, b1, c1, _, b2, c2 = popt
                 gauss_fit_fidelity = readout_fidelity_norm(b1, c1, b2, c2)
 
-
             popts[check_i] = popt
             pcovs[check_i] = pcov
 
@@ -367,8 +365,12 @@ def general_hist(
     fids = []
     thresholds = []
     # this method calculates fidelity as 1-2(Neg + Nge)/N
-    contrast = np.abs(((np.cumsum(n_tot_g) - np.cumsum(n_tot_e)) /
-                      (0.5 * n_tot_g.sum() + 0.5 * n_tot_e.sum())))
+    contrast = np.abs(
+        (
+            (np.cumsum(n_tot_g) - np.cumsum(n_tot_e))
+            / (0.5 * n_tot_g.sum() + 0.5 * n_tot_e.sum())
+        )
+    )
     tind = contrast.argmax()
     thresholds.append(bins[tind])
     # thresholds.append(np.average([bins_e[idx_e], bins_g[idx_g]]))
@@ -378,26 +380,35 @@ def general_hist(
         # this method calculates fidelity as
         # (Ngg+Nee)/N = Ngg/N + Nee/N=(0.5N-Nge)/N + (0.5N-Neg)/N = 1-(Nge+Neg)/N
         fids.append(
-            0.5 * (1 - n_tot_g[tind:].sum() / n_tot_g.sum() + 1 - n_tot_e[:tind].sum() / n_tot_e.sum()))
+            0.5
+            * (
+                1
+                - n_tot_g[tind:].sum() / n_tot_g.sum()
+                + 1
+                - n_tot_e[:tind].sum() / n_tot_e.sum()
+            )
+        )
 
     if plot:
         axs[0, 1].set_title(
-            f"Rotated ($\\theta={theta*180/np.pi:.5}^\\circ$)", fontsize=13)
+            f"Rotated ($\\theta={theta * 180 / np.pi:.5}^\\circ$)", fontsize=13
+        )
 
         axs[1, 0].axvline(thresholds[0], color="0.2", linestyle="--")
-        title = "$\overline{F}_{g" + e_label + \
-            "}$" if fid_avg else "$F_{g" + e_label + "}$"
+        title = (
+            "$\overline{F}_{g" + e_label + "}$" if fid_avg else "$F_{g" + e_label + "}$"
+        )
         if gauss_overlap:
-            axs[1, 0].set_title(f"{title}: {100*gauss_fit_fidelity:.3}%", fontsize=13)
+            axs[1, 0].set_title(f"{title}: {100 * gauss_fit_fidelity:.3}%", fontsize=13)
         else:
-            axs[1, 0].set_title(f"{title}: {100*fids[0]:.3}%", fontsize=13)
+            axs[1, 0].set_title(f"{title}: {100 * fids[0]:.3}%", fontsize=13)
         if ps_threshold is not None:
             axs[1, 0].axvline(ps_threshold, color="0.2", linestyle="-.")
 
-        axs[1, 1].plot(bins[:-1], np.cumsum(n_tot_g) /
-                       n_tot_g.sum(), "b", label="g")
-        axs[1, 1].plot(bins[:-1], np.cumsum(n_tot_e) /
-                       n_tot_e.sum(), "r", label=e_label)
+        axs[1, 1].plot(bins[:-1], np.cumsum(n_tot_g) / n_tot_g.sum(), "b", label="g")
+        axs[1, 1].plot(
+            bins[:-1], np.cumsum(n_tot_e) / n_tot_e.sum(), "r", label=e_label
+        )
         axs[1, 1].axvline(thresholds[0], color="0.2", linestyle="--")
 
         prop = {"size": 8}
@@ -423,8 +434,7 @@ def general_hist(
     if check_qnd:
         return_data += [n_diff_qnd]
 
-    print(
-        f'fidelity:{fids} \nthressholds:{thresholds} \ntheta:{theta * 180 / np.pi}')
+    print(f"fidelity:{fids} \nthressholds:{thresholds} \ntheta:{theta * 180 / np.pi}")
     return return_data
 
 

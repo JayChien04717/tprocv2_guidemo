@@ -127,7 +127,7 @@ def resonator_analyze(
         plt.axvline(res, color="r", ls="--", label=f"$f_{{res}}$ = {res:.2f} MHz")
     plt.legend()
 
-    return round(res, 2) if res is not None else None
+    return round(res, 3) if res is not None else None
 
 
 def spectrum_analyze(x: np.ndarray, y: np.ndarray, fit: bool = True) -> Optional[float]:
@@ -421,7 +421,12 @@ def T1_analyze(
 
 
 def T2fring_analyze(
-    x: float, y: float, fit: bool = True, normalize: bool = False, prefix=None
+    x: float,
+    y: float,
+    fit: bool = True,
+    normalize: bool = False,
+    prefix=None,
+    ramsey_freq=None,
 ):
     """T2 ramsey analyze
 
@@ -444,7 +449,7 @@ def T2fring_analyze(
     y = post_rotate(y)
     data: np.ndarray = np.abs(y)
 
-    pOpt, pCov = fitdecaysin(x, data)
+    pOpt, pCov = fitdecaysin(x, data, fitparams=[None, ramsey_freq, None, None, None])
     sim = decaysin(x, *pOpt)
     error = np.sqrt(np.diag(pCov))
 

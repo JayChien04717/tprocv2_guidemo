@@ -172,7 +172,7 @@ class T1_ef:
             ax.set_title(f"average: {avg + 1} / {py_avg}")
             ax.set_xlabel("Times (us)")
             ax.set_ylabel("Signal (ADC unit)")
-            ax.grid(True)
+
             clear_output(wait=True)
             display(fig)
 

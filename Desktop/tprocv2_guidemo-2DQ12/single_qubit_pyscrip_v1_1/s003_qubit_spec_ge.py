@@ -45,22 +45,36 @@ class PulseProbeSpectroscopyProgram(AveragerProgramV2):
             ch=ro_ch, name="myro", freq=cfg["res_freq_ge"], gen_ch=res_ch
         )
 
+        self.add_gauss(
+            ch=res_ch,
+            name="readout",
+            sigma=cfg["res_sigma"],
+            length=5 * cfg["res_sigma"],
+            even_length=True,
+        )
         self.add_pulse(
             ch=res_ch,
             name="res_pulse",
             ro_ch=ro_ch,
-            style="const",
+            style="flat_top",
+            envelope="readout",
             length=cfg["res_length"],
             freq=cfg["res_freq_ge"],
             phase=cfg["res_phase"],
             gain=cfg["res_gain_ge"],
         )
-
+        self.add_gauss(
+            ch=qubit_ch,
+            name="qubit",
+            sigma=cfg["sigma"],
+            length=5 * cfg["sigma"],
+            even_length=True,
+        )
         self.add_pulse(
             ch=qubit_ch,
             name="qubit_pulse",
-            ro_ch=ro_ch,
-            style="const",
+            style="flat_top",
+            envelope="qubit",
             length=cfg["qubit_length_ge"],
             freq=cfg["qubit_freq_ge"],
             phase=0,
@@ -169,11 +183,10 @@ class Qubit_Twotone:
 
             ax.cla()
             ax.plot(self.freqs, np.abs(self.iqdata), **marker_style)
-            plt.xticks(np.arange(len(sequence)), sequence, rotation=45)
             ax.set_title(f"average: {i + 1} / {py_avg}")
             ax.set_xlabel("Frequency (MHz)")
             ax.set_ylabel("ADC unist")
-            ax.grid(True)
+
             clear_output(wait=True)
             display(fig)
         clear_output(wait=True)

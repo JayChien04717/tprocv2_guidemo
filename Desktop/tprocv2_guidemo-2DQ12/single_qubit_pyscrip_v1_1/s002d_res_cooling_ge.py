@@ -53,16 +53,25 @@ class SingleToneSpectroscopyCoolingProgram(AveragerProgramV2):
             ch=ro_ch, name="myro", freq=cfg["res_freq_ge"], gen_ch=res_ch
         )
 
+        self.add_gauss(
+            ch=res_ch,
+            name="readout",
+            sigma=cfg["res_sigma"],
+            length=5 * cfg["res_sigma"],
+            even_length=True,
+        )
         self.add_pulse(
             ch=res_ch,
             name="res_pulse",
             ro_ch=ro_ch,
-            style="const",
+            style="flat_top",
+            envelope="readout",
             length=cfg["res_length"],
             freq=cfg["res_freq_ge"],
             phase=cfg["res_phase"],
             gain=cfg["res_gain_ge"],
         )
+
         self.add_pulse(
             ch=cool_ch1,
             name="cool_pulse1",
@@ -151,7 +160,7 @@ class SingleToneSpectroscopyCooling:
             ax.set_title(f"average: {i + 1} / {py_avg}")
             ax.set_ylabel(r"$|f,0\rangle - |g,1\rangle$")
             ax.set_xlabel(r"$|f,0\rangle - |e,0\rangle$")
-            ax.grid(False)
+
             clear_output(wait=True)
             display(fig)
 

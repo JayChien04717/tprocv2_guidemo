@@ -33,12 +33,19 @@ class LoopbackProgram(AveragerProgramV2):
         self.add_readoutconfig(
             ch=ro_ch, name="myro", freq=cfg["res_freq_ge"], gen_ch=res_ch
         )
-
+        self.add_gauss(
+            ch=res_ch,
+            name="readout",
+            sigma=cfg["res_sigma"],
+            length=5 * cfg["res_sigma"],
+            even_length=True,
+        )
         self.add_pulse(
             ch=res_ch,
-            name="myconst",
+            name="loopback_pulse",
             ro_ch=ro_ch,
-            style="const",
+            style="flat_top",
+            envelope="readout",
             length=cfg["res_length"],
             freq=cfg["res_freq_ge"],
             phase=cfg["res_phase"],
@@ -47,7 +54,7 @@ class LoopbackProgram(AveragerProgramV2):
 
     def _body(self, cfg):
         self.send_readoutconfig(ch=cfg["ro_ch"], name="myro", t=0)
-        self.pulse(ch=cfg["res_ch"], name="myconst", t=0)
+        self.pulse(ch=cfg["res_ch"], name="loopback_pulse", t=0)
         self.trigger(ros=[cfg["ro_ch"]], pins=[0], t=0)
 
 
@@ -64,7 +71,7 @@ class TOF:
         self.iq_list = prog.acquire_decimated(self.soc, rounds=py_avg)
         self.t = prog.get_time_axis(ro_index=0)
 
-    def plot(self):
+    def plot(self, thressold=1.5):
         if self.iq_list is not None:
             plt.plot(self.t, self.iq_list[0].T[0])
             plt.plot(self.t, self.iq_list[0].T[1])
@@ -75,7 +82,9 @@ class TOF:
 
             mean = np.mean(np.abs(self.iq_list[0].dot([1, 1j])))
             plt.axvline(
-                self.t[np.argmax(np.abs(self.iq_list[0].dot([1, 1j])) > 1.5 * mean)],
+                self.t[
+                    np.argmax(np.abs(self.iq_list[0].dot([1, 1j])) > thressold * mean)
+                ],
                 c="r",
                 ls="--",
             )

@@ -36,11 +36,19 @@ class SingleToneSpectroscopyProgram_yoko(AveragerProgramV2):
             ch=ro_ch, name="myro", freq=cfg["res_freq_ge"], gen_ch=res_ch
         )
 
+        self.add_gauss(
+            ch=res_ch,
+            name="readout",
+            sigma=cfg["res_sigma"],
+            length=5 * cfg["res_sigma"],
+            even_length=True,
+        )
         self.add_pulse(
             ch=res_ch,
             name="res_pulse",
             ro_ch=ro_ch,
-            style="const",
+            style="flat_top",
+            envelope="readout",
             length=cfg["res_length"],
             freq=cfg["res_freq_ge"],
             phase=cfg["res_phase"],
@@ -68,11 +76,19 @@ class SingleToneSpectroscopyProgram_hardware(AveragerProgramV2):
             ch=ro_ch, name="myro", freq=cfg["res_freq_ge"], gen_ch=res_ch
         )
 
+        self.add_gauss(
+            ch=res_ch,
+            name="readout",
+            sigma=cfg["res_sigma"],
+            length=5 * cfg["res_sigma"],
+            even_length=True,
+        )
         self.add_pulse(
             ch=res_ch,
             name="res_pulse",
             ro_ch=ro_ch,
-            style="const",
+            style="flat_top",
+            envelope="readout",
             length=cfg["res_length"],
             freq=cfg["res_freq_ge"],
             phase=cfg["res_phase"],
@@ -123,7 +139,13 @@ class Resonator_onetone_flux:
     def plot(self):
         pass
 
-    def liveplot_yoko(self, py_avg, yoko_currnet: np.ndarray, yoko_inst: str = None):
+    def liveplot_yoko(
+        self,
+        py_avg,
+        yoko_value: np.ndarray,
+        yoko_inst: str = None,
+        mode: str = "current",
+    ):
         from .YOKOGS200 import YOKOGS200
         import pyvisa
 
@@ -137,34 +159,47 @@ class Resonator_onetone_flux:
             cfg=self.cfg,
         )
         self.freqs = prog.get_pulse_param("res_pulse", "freq", as_array=True)
-        self.iqdata = np.zeros((len(yoko_currnet), len(self.freqs)))
-        self.yoko_currnet = yoko_currnet
+        self.iqdata = np.zeros((len(yoko_value), len(self.freqs)))
+        self.yoko_currnet = yoko_value
         mesh = ax.pcolormesh(
-            yoko_currnet * 1e3,
+            yoko_value * 1e3,
             self.freqs,
             self.iqdata.T,  # transpose: pcolormesh expects (Y, X)
             shading="nearest",
         )
 
         ax.set_ylabel("Frequency (MHz)")
-        ax.set_xlabel("Current (mA)")
 
-        for idx, curr in tqdm(enumerate(yoko_currnet)):
-            yoko.SetCurrent(curr)
+        for idx, curr in tqdm(enumerate(yoko_value)):
+            if mode == "current":
+                yoko.SetMode("current")
+                yoko.SetCurrent(curr)
+                ax.set_title(
+                    f"Resonator Onetone Current ={curr * 1e3:.3f}mA : {idx + 1}/{len(yoko_value)}"
+                )
+                ax.set_xlabel("Current (mA)")
+            elif mode == "voltage":
+                yoko.SetMode("voltage")
+                yoko.SetVoltage(curr)
+                ax.set_title(
+                    f"Resonator Onetone Voltage ={curr * 1e3:.3f}mV : {idx + 1}/{len(yoko_value)}"
+                )
+                ax.set_xlabel("Voltage (mV)")
             iq_list = prog.acquire(self.soc, rounds=py_avg, progress=False)
             iq = iq_list[0][0].dot([1, 1j])
             self.iqdata[idx, :] = np.abs(iq)
             mesh.set_array(self.iqdata.T.ravel())
             mesh.set_clim(vmin=np.min(self.iqdata), vmax=np.max(self.iqdata))
-            ax.set_title(
-                f"Resonator Onetone Flux current ={curr * 1e3:.3f}mA : {idx + 1}/{len(yoko_currnet)}"
-            )
+
             clear_output(wait=True)
             display(fig)
 
         clear_output(wait=True)
-        ax.pcolormesh(yoko_currnet * 1e3, self.freqs, self.iqdata.T, shading="nearest")
-        ax.set_title("Resonator Onetone Flux")
+        ax.pcolormesh(yoko_value * 1e3, self.freqs, self.iqdata.T, shading="nearest")
+        if mode == "current":
+            ax.set_title("Resonator Onetone Current")
+        elif mode == "voltage":
+            ax.set_title("Resonator Onetone Voltage")
 
     def liveplot_hardwre(self, py_avg):
         iq = 0
@@ -190,13 +225,13 @@ class Resonator_onetone_flux:
             ax.set_title(f"average: {i + 1} / {py_avg}")
             ax.set_xlabel("Frequency (MHz)")
             ax.set_ylabel("Flux Gains")
-            ax.grid(False)
+
             clear_output(wait=True)
             display(fig)
         clear_output(wait=True)
         ax.pcolormesh(self.freqs, self.gains, np.abs(post_rotate(self.iqdata)))
 
-    def saveLabber(self, qb_idx, yoko_current=None):
+    def saveLabber(self, qb_idx, yoko_value=None, mode: str = "current"):
         expt_name = "s002_onetone_flux" + f"_Q{qb_idx}"
         file_path = get_next_filename_labber(DATA_PATH, expt_name)
         try:
@@ -206,15 +241,41 @@ class Resonator_onetone_flux:
 
         dict_val = yml_comment(self.cfg)
 
-        if yoko_current is not None:
-            hdf5_generator(
-                filepath=file_path,
-                x_info={"name": "Frequency", "unit": "Hz", "values": self.freqs * 1e6},
-                y_info={"name": "Yoko", "unit": "A", "values": yoko_current},
-                z_info={"name": "Signal", "unit": "ADC unit", "values": self.iqdata},
-                comment=(f"{dict_val}"),
-                tag="OneTone",
-            )
+        if yoko_value is not None:
+            if mode == "current":
+                hdf5_generator(
+                    filepath=file_path,
+                    x_info={
+                        "name": "Frequency",
+                        "unit": "Hz",
+                        "values": self.freqs * 1e6,
+                    },
+                    y_info={"name": "Yoko", "unit": "A", "values": yoko_value},
+                    z_info={
+                        "name": "Signal",
+                        "unit": "ADC unit",
+                        "values": self.iqdata,
+                    },
+                    comment=(f"{dict_val}"),
+                    tag="OneTone",
+                )
+            elif mode == "voltage":
+                hdf5_generator(
+                    filepath=file_path,
+                    x_info={
+                        "name": "Frequency",
+                        "unit": "Hz",
+                        "values": self.freqs * 1e6,
+                    },
+                    y_info={"name": "Yoko", "unit": "V", "values": yoko_value},
+                    z_info={
+                        "name": "Signal",
+                        "unit": "ADC unit",
+                        "values": self.iqdata,
+                    },
+                    comment=(f"{dict_val}"),
+                    tag="OneTone",
+                )
         print(f"Data save to {file_path}")
 
 

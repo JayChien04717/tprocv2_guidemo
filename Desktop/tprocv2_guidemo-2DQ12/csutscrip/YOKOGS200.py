@@ -3,16 +3,14 @@ import pyvisa as visa
 import numpy as np
 import time
 
-rm = visa.ResourceManager()
-
 
 class YOKOGS200:
     _rampstep = 1e-7  # 0.0001 #0.001 # increment step when setting voltage/current
-    _rampinterval = 0.01  # dwell time for each voltage step # Default MATLAB is 0.01, CANNOT be lower than 0.001 otherwise fridge heats up
+    _rampinterval = 0.001  # dwell time for each voltage step # Default MATLAB is 0.01, CANNOT be lower than 0.001 otherwise fridge heats up
 
     # Initializes session for device.
     # VISAaddress: address of device, rm: VISA resource manager
-    def __init__(self, VISAaddress, rm=rm):
+    def __init__(self, VISAaddress, rm):
         self.VISAaddress = VISAaddress
         try:
             self.session = rm.open_resource(VISAaddress)
@@ -34,10 +32,10 @@ class YOKOGS200:
 
     # Ramp up the voltage (volts) in increments of _rampstep, waiting _rampinterval
     # between each increment.
-    def SetVoltage(self, voltage):
+    def SetVoltage(self, voltage, _rampstep=1e-4):
         start = self.GetVoltage()
         stop = voltage
-        steps = max(1, round(abs(stop - start) / self._rampstep))
+        steps = max(1, round(abs(stop - start) / _rampstep))
         tempvolts = np.linspace(start, stop, num=steps + 1, endpoint=True)
         # print(tempvolts)
         self.OutputOn()
@@ -47,10 +45,10 @@ class YOKOGS200:
 
     # Ramp up the current (amps) in increments of _rampstep, waiting _rampinterval
     # between each increment.
-    def SetCurrent(self, current):
+    def SetCurrent(self, current, _rampstep=1e-7):
         start = self.GetCurrent()
         stop = current
-        steps = max(1, round(abs(stop - start) / self._rampstep))
+        steps = max(1, round(abs(stop - start) / _rampstep))
         tempcurrents = np.linspace(start, stop, num=steps)
         self.OutputOn()
         for tempcurrent in tempcurrents:
@@ -77,7 +75,6 @@ class YOKOGS200:
         self.session.write("SOURce:FUNCtion CURRent")
         self.session.write("SOURce:LEVel?")
         result = self.session.read()
-
         return float(result.rstrip("\n"))
 
     # Returns the mode (voltage or current)

@@ -47,11 +47,19 @@ class SpinEchoProgram(AveragerProgramV2):
 
         self.add_loop("waitloop", cfg["steps"])
 
+        self.add_gauss(
+            ch=res_ch,
+            name="readout",
+            sigma=cfg["res_sigma"],
+            length=5 * cfg["res_sigma"],
+            even_length=True,
+        )
         self.add_pulse(
             ch=res_ch,
             name="res_pulse",
             ro_ch=ro_ch,
-            style="const",
+            style="flat_top",
+            envelope="readout",
             length=cfg["res_length"],
             freq=cfg["res_freq_ge"],
             phase=cfg["res_phase"],
@@ -116,19 +124,35 @@ class SpinEchoProgram(AveragerProgramV2):
         else:
             self.declare_gen(ch=cool_ch2, nqz=cfg["nqz_cool_ch2"])
 
+        self.add_gauss(
+            ch=cool_ch1,
+            name="cooling1",
+            sigma=cfg["res_sigma"],
+            length=cfg["res_sigma"] * 5,
+            even_length=True,
+        )
         self.add_pulse(
             ch=cool_ch1,
             name="cool_pulse1",
-            style="const",
+            envelope="cooling1",
+            style="flat_top",
             length=cfg["cool_length"],
             freq=cfg["cool_freq_1"],
             phase=0,
             gain=cfg["cool_gain_1"],
         )
+        self.add_gauss(
+            ch=cool_ch2,
+            name="cooling2",
+            sigma=cfg["res_sigma"],
+            length=cfg["res_sigma"] * 5,
+            even_length=True,
+        )
         self.add_pulse(
             ch=cool_ch2,
             name="cool_pulse2",
-            style="const",
+            envelope="cooling2",
+            style="flat_top",
             length=cfg["cool_length"],
             freq=cfg["cool_freq_2"],
             phase=0,
@@ -215,7 +239,7 @@ class SpinEcho:
             ax.set_title(f"average: {avg + 1} / {py_avg}")
             ax.set_xlabel("Times (us)")
             ax.set_ylabel("Signal (ADC unit)")
-            ax.grid(True)
+
             clear_output(wait=True)
             display(fig)
 

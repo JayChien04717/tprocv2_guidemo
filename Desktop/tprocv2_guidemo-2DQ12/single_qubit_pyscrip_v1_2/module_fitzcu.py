@@ -1,12 +1,12 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import scipy as sp
-from fitting import *
+from .fitting import *
 from typing import Optional, Dict
 import pprint
 
 try:
-    from abcd_rf_fit import *
+    from .abcd_rf_fit import *
 except:
     print("No circle fit package")
 
@@ -282,14 +282,14 @@ def amprabi_analyze(
             plt.legend(loc=1)
         elif protocal == "pipi":
             plt.plot(x, data, label="pipi pulse", **marker_style)
-            plt.axvline(pi_gain, color="r", ls="--", label=f"pi/2 gain = {pi_gain:.6f}")
+            plt.axvline(pi_gain, color="r", ls="--", label=f"pi/2 gain = {pi_gain:.3f}")
             plt.legend(loc=1)
 
         elif protocal == None:
             plt.plot(x, data, label="meas", **marker_style)
-            plt.axvline(pi_gain, color="r", ls="--", label=f"pi gain = {pi_gain:.6f}")
+            plt.axvline(pi_gain, color="r", ls="--", label=f"pi gain = {pi_gain:.3f}")
             plt.axvline(
-                pi2_gain, color="r", ls="--", label=f"pi2 gain = {pi2_gain:.6f}"
+                pi2_gain, color="r", ls="--", label=f"pi2 gain = {pi2_gain:.3f}"
             )
             plt.legend(loc=1)
         plt.plot(x, decaysin(x, *pOpt), label="Fit")
@@ -838,8 +838,8 @@ def hist(
 
     gg = 100 * (1 - ng[tind:].sum() / ng.sum())
     ge = 100 * (ng[tind:].sum() / ng.sum())
-    eg = 100 * (1 - ne[tind:].sum() / ng.sum())
-    ee = 100 * (ne[tind:].sum() / ng.sum())
+    eg = 100 * (1 - ne[tind:].sum() / ne.sum())
+    ee = 100 * (ne[tind:].sum() / ne.sum())
 
     if b_print:
         print(

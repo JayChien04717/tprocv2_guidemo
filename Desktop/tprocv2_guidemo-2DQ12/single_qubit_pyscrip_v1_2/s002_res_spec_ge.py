@@ -35,12 +35,19 @@ class SingleToneSpectroscopyProgram(AveragerProgramV2):
         self.add_readoutconfig(
             ch=ro_ch, name="myro", freq=cfg["res_freq_ge"], gen_ch=res_ch
         )
-
+        self.add_gauss(
+            ch=res_ch,
+            name="readout",
+            sigma=cfg["res_sigma"],
+            length=5 * cfg["res_sigma"],
+            even_length=True,
+        )
         self.add_pulse(
             ch=res_ch,
             name="res_pulse",
             ro_ch=ro_ch,
-            style="const",
+            style="flat_top",
+            envelope="readout",
             length=cfg["res_length"],
             freq=cfg["res_freq_ge"],
             phase=cfg["res_phase"],
@@ -63,20 +70,35 @@ class SingleToneSpectroscopyProgram(AveragerProgramV2):
             )
         else:
             self.declare_gen(ch=cool_ch2, nqz=cfg["nqz_cool_ch2"])
-
+        self.add_gauss(
+            ch=cool_ch1,
+            name="cool1",
+            sigma=cfg["res_sigma"],
+            length=5 * cfg["res_sigma"],
+            even_length=True,
+        )
         self.add_pulse(
             ch=cool_ch1,
             name="cool_pulse1",
-            style="const",
+            style="flat_top",
+            envelope="cool1",
             length=cfg["cool_length"],
             freq=cfg["cool_freq_1"],
             phase=0,
             gain=cfg["cool_gain_1"],
         )
+        self.add_gauss(
+            ch=cool_ch2,
+            name="cool2",
+            sigma=cfg["res_sigma"],
+            length=5 * cfg["res_sigma"],
+            even_length=True,
+        )
         self.add_pulse(
             ch=cool_ch2,
             name="cool_pulse2",
-            style="const",
+            style="flat_top",
+            envelope="cool2",
             length=cfg["cool_length"],
             freq=cfg["cool_freq_2"],
             phase=0,
@@ -100,9 +122,9 @@ class Resonator_onetone:
         self.soccfg = soccfg
         self.cfg = config
 
-    def run(self, py_avg, liveplot=False):
+    def run(self, py_avg, liveplot=False, solve_type="hm"):
         if liveplot:
-            return self.liveplot(py_avg)
+            return self.liveplot(py_avg, solve_type=solve_type)
 
         else:
             prog = SingleToneSpectroscopyProgram(
@@ -112,7 +134,7 @@ class Resonator_onetone:
                 cfg=self.cfg,
             )
 
-            iq_list = prog.acquire(self.soc, soft_avgs=py_avg, progress=True)
+            iq_list = prog.acquire(self.soc, rounds=py_avg, progress=True)
             self.iqdata = iq_list[0][0].dot([1, 1j])
             self.freqs = prog.get_pulse_param("res_pulse", "freq", as_array=True)
 
@@ -124,7 +146,7 @@ class Resonator_onetone:
         param = resonator_circlefit(self.freqs, self.iqdata)
         return param
 
-    def liveplot(self, py_avg):
+    def liveplot(self, py_avg, solve_type="hm"):
         iq = 0
         prog = SingleToneSpectroscopyProgram(
             self.soccfg,
@@ -153,20 +175,17 @@ class Resonator_onetone:
             ax.set_title(f"average: {i + 1} / {py_avg}")
             ax.set_xlabel("Frequency (MHz)")
             ax.set_ylabel("ADC unist")
-            ax.grid(True)
+
             clear_output(wait=True)
             display(fig)
         clear_output(wait=True)
         plt.close(fig)
 
-        pOpt, _ = fit_asym_lor(
-            self.freqs, np.abs(post_rotate(self.iqdata))
-        )  # Fit the data
-        param = resonator_circlefit(self.freqs, self.iqdata)
-        self.sim = asym_lorfunc(self.freqs, *pOpt)
+        param = resonator_circlefit(self.freqs, self.iqdata, solve_type=solve_type)
+
         return param
 
-    def saveLabber(self, qb_idx, yoko_current=None, save_sim=False):
+    def saveLabber(self, qb_idx, yoko_current=None):
         expt_name = "s002_onetone" + f"_Q{qb_idx}"
         file_path = get_next_filename_labber(DATA_PATH, expt_name, yoko_current)
         try:
@@ -176,47 +195,11 @@ class Resonator_onetone:
 
         dict_val = yml_comment(self.cfg)
 
-        if save_sim:
-            hdf5_generator(
-                filepath=file_path,
-                x_info={"name": "Frequency", "unit": "Hz", "values": self.freqs * 1e6},
-                y_info={"name": "simulate", "unit": "None", "values": np.array([0, 1])},
-                z_info={
-                    "name": "Signal",
-                    "unit": "ADC unit",
-                    "values": np.array([self.iqdata, self.sim]),
-                },
-                comment=(f"{dict_val}"),
-                tag="OneTone",
-            )
-        else:
-            hdf5_generator(
-                filepath=file_path,
-                x_info={"name": "Frequency", "unit": "Hz", "values": self.freqs * 1e6},
-                z_info={"name": "Signal", "unit": "ADC unit", "values": self.iqdata},
-                comment=(),
-                tag="OneTone",
-            )
+        hdf5_generator(
+            filepath=file_path,
+            x_info={"name": "Frequency", "unit": "Hz", "values": self.freqs * 1e6},
+            z_info={"name": "Signal", "unit": "ADC unit", "values": self.iqdata},
+            comment=(f"{dict_val}"),
+            tag="OneTone",
+        )
         print(f"Data save to {file_path}")
-
-
-if __name__ == "__main__":
-    ###################
-    # Experiment sweep parameter
-    ###################
-
-    # START_FREQ = 4000  # [MHz]
-    # STOP_FREQ = 5000  # [MHz]
-    # STEPS = 101
-    # config.update([('steps', STEPS), ('res_freq_ge',
-    #             QickSweep1D('freqloop', START_FREQ, STOP_FREQ))])
-
-    # ###################
-    # # Run the Program
-    # ###################
-
-    # onetone = Resonator_onetone(soccfg, config)
-    # onetone.run(reps=1)
-    # onetone.plot()
-    # onetone.save()
-    pass

@@ -20,10 +20,12 @@ def get_best_fit(
     get_best_data_params=(),
     override=None,
 ):
-    fit_errs = [data[f"{prefix}_err_{check}"]
-                for check in check_measures for prefix in prefixes]
+    fit_errs = [
+        data[f"{prefix}_err_{check}"] for check in check_measures for prefix in prefixes
+    ]
     all_check_measures = [
-        f"{prefix}_err_{check}" for check in check_measures for prefix in prefixes]
+        f"{prefix}_err_{check}" for check in check_measures for prefix in prefixes
+    ]
 
     # fix the error matrix so "0" error is adjusted to inf
     for fit_err_check in fit_errs:
@@ -31,8 +33,9 @@ def get_best_fit(
             if fit_err == 0:
                 fit_err_check[i][i] = np.inf
 
-    fits = [data[f"{prefix}_{check}"]
-            for check in check_measures for prefix in prefixes]
+    fits = [
+        data[f"{prefix}_{check}"] for check in check_measures for prefix in prefixes
+    ]
 
     if override is not None and override in all_check_measures:
         i_best = np.argwhere(np.array(all_check_measures) == override)[0][0]
@@ -52,7 +55,11 @@ def get_best_fit(
             )
             # total sum of squares
             ss_tot_checks = np.array(
-                [np.sum((np.mean(ydata_check) - ydata_check) ** 2) for ydata_check in ydata])
+                [
+                    np.sum((np.mean(ydata_check) - ydata_check) ** 2)
+                    for ydata_check in ydata
+                ]
+            )
             # R^2 value
             r2 = 1 - ss_res_checks / ss_tot_checks
 
@@ -71,8 +78,9 @@ def get_best_fit(
                 if np.any(np.abs(fit_err) == np.inf):
                     errs.append(np.nan)
                 else:
-                    errs.append(np.average(
-                        np.sqrt(np.abs(np.diag(fit_err))) / np.abs(fit)))
+                    errs.append(
+                        np.average(np.sqrt(np.abs(np.diag(fit_err))) / np.abs(fit))
+                    )
             for i_err, err in enumerate(errs):
                 if np.isnan(err):
                     errs[i_err] = np.inf
@@ -82,9 +90,9 @@ def get_best_fit(
     best_data = [fits[i_best], fit_errs[i_best]]
 
     for param in get_best_data_params:
-        assert len(fit_errs) == len(
-            check_measures
-        ), "this is a pathological use of this function anyway, so just restrict to these cases"
+        assert len(fit_errs) == len(check_measures), (
+            "this is a pathological use of this function anyway, so just restrict to these cases"
+        )
         # best_meas = all_check_measures[i_best]
         best_meas = check_measures[i_best]
         best_data.append(data[f"{param}_{best_meas}"])
@@ -138,8 +146,7 @@ def fitlogexp(xdata, ydata, fitparams=None):
     pOpt = fitparams
     pCov = np.full(shape=(len(fitparams), len(fitparams)), fill_value=np.inf)
     try:
-        pOpt, pCov = sp.optimize.curve_fit(
-            logexpfunc, xdata, ydata, p0=fitparams)
+        pOpt, pCov = sp.optimize.curve_fit(logexpfunc, xdata, ydata, p0=fitparams)
         # return pOpt, pCov
     except RuntimeError:
         print("Warning: fit failed!")
@@ -148,6 +155,7 @@ def fitlogexp(xdata, ydata, fitparams=None):
 
 
 # ====================================================== #
+
 
 # see https://www.science.org/doi/epdf/10.1126/science.aah5844
 # assumes function has been scaled to log scale and goes from 0 to 1
@@ -169,8 +177,10 @@ def fitqpexp(xdata, ydata, fitparams=None):
         fitparams[2] = (xdata[-1] - xdata[0]) / 2
     pOpt = fitparams
     pCov = np.full(shape=(len(fitparams), len(fitparams)), fill_value=np.inf)
-    bounds = ([0.01, 0.01 * fitparams[1], 0.01 * fitparams[2]],
-              [5, 2 * fitparams[1], 10 * fitparams[2]])
+    bounds = (
+        [0.01, 0.01 * fitparams[1], 0.01 * fitparams[2]],
+        [5, 2 * fitparams[1], 10 * fitparams[2]],
+    )
     for i, param in enumerate(fitparams):
         if not (bounds[0][i] < param < bounds[1][i]):
             fitparams[i] = np.mean((bounds[0][i], bounds[1][i]))
@@ -179,7 +189,8 @@ def fitqpexp(xdata, ydata, fitparams=None):
             )
     try:
         pOpt, pCov = sp.optimize.curve_fit(
-            qp_expfunc, xdata, ydata, p0=fitparams, bounds=bounds)
+            qp_expfunc, xdata, ydata, p0=fitparams, bounds=bounds
+        )
         # return pOpt, pCov
     except RuntimeError:
         print("Warning: fit failed!")
@@ -221,7 +232,11 @@ def fit_gauss(xdata, ydata, fitparams=None):
             )
     try:
         pOpt, pCov = sp.optimize.curve_fit(
-            gaussian, xdata, ydata, p0=np.array(fitparams, dtype="float64"), bounds=bounds
+            gaussian,
+            xdata,
+            ydata,
+            p0=np.array(fitparams, dtype="float64"),
+            bounds=bounds,
         )
         # return pOpt, pCov
     except RuntimeError:
@@ -232,7 +247,9 @@ def fit_gauss(xdata, ydata, fitparams=None):
 
 # ====================================================== #
 def double_gaussian(x, a1, b1, c1, a2, b2, c2):
-    return a1 * np.exp(-((x - b1) ** 2) / (2 * c1**2)) + a2 * np.exp(-((x - b2) ** 2) / (2 * c2**2))
+    return a1 * np.exp(-((x - b1) ** 2) / (2 * c1**2)) + a2 * np.exp(
+        -((x - b2) ** 2) / (2 * c2**2)
+    )
 
 
 def fit_doublegauss(xdata, ydata, fitparams=None):
@@ -249,20 +266,31 @@ def fit_doublegauss(xdata, ydata, fitparams=None):
     if fitparams[2] is None:
         fitparams[2] = (midpoint - np.min(xdata)) / 4
     if fitparams[3] is None:
-        fitparams[3] = np.max(ydata[len(ydata) // 2:])
+        fitparams[3] = np.max(ydata[len(ydata) // 2 :])
     if fitparams[4] is None:
-        fitparams[4] = xdata[len(ydata) // 2 +
-                             np.argmax(ydata[len(ydata) // 2:])]
+        fitparams[4] = xdata[len(ydata) // 2 + np.argmax(ydata[len(ydata) // 2 :])]
     if fitparams[5] is None:
         fitparams[5] = (np.max(xdata) - midpoint) / 4
     pOpt = fitparams
 
     pCov = np.full(shape=(len(fitparams), len(fitparams)), fill_value=np.inf)
     bounds = (
-        [fitparams[0] * 0.95, np.min(xdata), fitparams[2] * 0.2,
-         fitparams[3] * 0.95, midpoint, fitparams[5] * 0.2],
-        [fitparams[0] * 1.05, midpoint, fitparams[2] * 2,
-            fitparams[3] * 1.05, np.max(xdata), fitparams[5] * 2],
+        [
+            fitparams[0] * 0.95,
+            np.min(xdata),
+            fitparams[2] * 0.2,
+            fitparams[3] * 0.95,
+            midpoint,
+            fitparams[5] * 0.2,
+        ],
+        [
+            fitparams[0] * 1.05,
+            midpoint,
+            fitparams[2] * 2,
+            fitparams[3] * 1.05,
+            np.max(xdata),
+            fitparams[5] * 2,
+        ],
     )
     for i, param in enumerate(fitparams):
         if not (bounds[0][i] < param < bounds[1][i]):
@@ -272,7 +300,11 @@ def fit_doublegauss(xdata, ydata, fitparams=None):
             )
     try:
         pOpt, pCov = sp.optimize.curve_fit(
-            double_gaussian, xdata, ydata, p0=np.array(fitparams, dtype="float64"), bounds=bounds
+            double_gaussian,
+            xdata,
+            ydata,
+            p0=np.array(fitparams, dtype="float64"),
+            bounds=bounds,
         )
         # return pOpt, pCov
     except RuntimeError:
@@ -352,8 +384,14 @@ def fitnlor(xdata, ydata, npeaks, f0_guess, chi_guess, fitparams=None):
             0,
             0.25 * chi_guess,
         ],
-        [max(ydata), 10 * fitparams[1], max(xdata),
-         10 * fitparams[3], npeaks, 4 * chi_guess],
+        [
+            max(ydata),
+            10 * fitparams[1],
+            max(xdata),
+            10 * fitparams[3],
+            npeaks,
+            4 * chi_guess,
+        ],
     )
     for i, param in enumerate(fitparams):
         if not (bounds[0][i] < param < bounds[1][i]):
@@ -364,8 +402,7 @@ def fitnlor(xdata, ydata, npeaks, f0_guess, chi_guess, fitparams=None):
     try:
         # print('npeaks', npeaks)
         fitnlorfunc = lambda x, *p: nlorfunc(x, npeaks, *p)
-        pOpt, pCov = sp.optimize.curve_fit(
-            fitnlorfunc, xdata, ydata, p0=fitparams)
+        pOpt, pCov = sp.optimize.curve_fit(fitnlorfunc, xdata, ydata, p0=fitparams)
         # return pOpt, pCov
     except RuntimeError:
         print("Warning: fit failed!")
@@ -404,8 +441,7 @@ def fit_asym_lor(xdata, ydata, fitparams=None):
     pOpt = fitparams
     pCov = np.full(shape=(len(fitparams), len(fitparams)), fill_value=np.inf)
     try:
-        pOpt, pCov = sp.optimize.curve_fit(
-            asym_lorfunc, xdata, ydata, p0=fitparams)
+        pOpt, pCov = sp.optimize.curve_fit(asym_lorfunc, xdata, ydata, p0=fitparams)
     except RuntimeError:
         print("Warning: fit failed!")
     return pOpt, pCov
@@ -422,12 +458,26 @@ def fitsin(xdata, ydata, fitparams=None):
         fitparams = [None] * 4
     else:
         fitparams = np.copy(fitparams)
+    # fourier = np.fft.fft(ydata)
+    # fft_freqs = np.fft.fftfreq(len(ydata), d=xdata[1] - xdata[0])
+    # fft_phases = np.angle(fourier)
+    # max_ind = np.argmax(np.abs(fourier[1:])) + 1
+    # max_freq = np.abs(fft_freqs[max_ind])
+    # max_phase = fft_phases[max_ind]
+
     fourier = np.fft.fft(ydata)
     fft_freqs = np.fft.fftfreq(len(ydata), d=xdata[1] - xdata[0])
     fft_phases = np.angle(fourier)
-    max_ind = np.argmax(np.abs(fourier[1:])) + 1
-    max_freq = np.abs(fft_freqs[max_ind])
-    max_phase = fft_phases[max_ind]
+
+    half_N = len(ydata) // 2
+    mag = np.abs(fourier[1:half_N])
+    phase = fft_phases[1:half_N]
+    freqs = fft_freqs[1:half_N]
+
+    max_ind = np.argmax(mag)
+    max_freq = freqs[max_ind]
+    max_phase = phase[max_ind]
+
     if fitparams[0] is None:
         fitparams[0] = max(ydata) - min(ydata)
     if fitparams[1] is None:
@@ -437,8 +487,7 @@ def fitsin(xdata, ydata, fitparams=None):
     if fitparams[3] is None:
         fitparams[3] = np.mean(ydata)
     bounds = (
-        [0.5 * fitparams[0], 0.2 /
-            (max(xdata) - min(xdata)), -360, np.min(ydata)],
+        [0.5 * fitparams[0], 0.2 / (max(xdata) - min(xdata)), -360, np.min(ydata)],
         [2 * fitparams[0], 5 / (max(xdata) - min(xdata)), 360, np.max(ydata)],
     )
     for i, param in enumerate(fitparams):
@@ -451,7 +500,8 @@ def fitsin(xdata, ydata, fitparams=None):
     pCov = np.full(shape=(len(fitparams), len(fitparams)), fill_value=np.inf)
     try:
         pOpt, pCov = sp.optimize.curve_fit(
-            sinfunc, xdata, ydata, p0=fitparams, bounds=bounds)
+            sinfunc, xdata, ydata, p0=fitparams, bounds=bounds
+        )
         # return pOpt, pCov
     except RuntimeError:
         print("Warning: fit failed!")
@@ -491,7 +541,8 @@ def fitquadratic(xdata, ydata, fitparams=None):
     pCov = np.full(shape=(len(fitparams), len(fitparams)), fill_value=np.inf)
     try:
         pOpt, pCov = sp.optimize.curve_fit(
-            quadraticfunc, xdata, ydata, p0=fitparams)  # , bounds=bounds)
+            quadraticfunc, xdata, ydata, p0=fitparams
+        )  # , bounds=bounds)
         # return pOpt, pCov
     except RuntimeError:
         print("Warning: fit failed!")
@@ -506,7 +557,12 @@ def rabifunc(x, *p):
     length, omega, f0, scale, z0 = p
     sqrt_part = 1 + (x - f0) ** 2 / omega**2
     factor = omega**2 / (omega**2 + (x - f0) ** 2)
-    return z0 + scale * factor * np.sin(2 * np.pi * omega * np.sqrt(sqrt_part) * length / 2) ** 2
+    return (
+        z0
+        + scale
+        * factor
+        * np.sin(2 * np.pi * omega * np.sqrt(sqrt_part) * length / 2) ** 2
+    )
 
 
 def fitrabi_gainslice(xdata, ydata, length, fitparams=None):
@@ -549,7 +605,8 @@ def fitrabi_gainslice(xdata, ydata, length, fitparams=None):
     pCov = np.full(shape=(len(fitparams), len(fitparams)), fill_value=np.inf)
     try:
         pOpt, pCov = sp.optimize.curve_fit(
-            rabifunc, xdata, ydata, p0=fitparams, bounds=bounds)
+            rabifunc, xdata, ydata, p0=fitparams, bounds=bounds
+        )
         # return pOpt, pCov
     except RuntimeError:
         print("Warning: fit failed!")
@@ -562,7 +619,12 @@ def fitrabi_gainslice(xdata, ydata, length, fitparams=None):
 
 def decaysin(x, *p):
     yscale, freq, phase_deg, decay, y0 = p
-    return yscale * np.sin(2 * np.pi * freq * x + phase_deg * np.pi / 180) * np.exp(-x / decay) + y0
+    return (
+        yscale
+        * np.sin(2 * np.pi * freq * x + phase_deg * np.pi / 180)
+        * np.exp(-x / decay)
+        + y0
+    )
 
 
 def fitdecaysin(xdata, ydata, fitparams=None):
@@ -570,15 +632,28 @@ def fitdecaysin(xdata, ydata, fitparams=None):
         fitparams = [None] * 5
     else:
         fitparams = np.copy(fitparams)
+    # fourier = np.fft.fft(ydata)
+    # fft_freqs = np.fft.fftfreq(len(ydata), d=xdata[1] - xdata[0])
+    # fft_phases = np.angle(fourier)
+    # sorted_fourier = np.sort(fourier)
+    # max_ind = np.argwhere(fourier == sorted_fourier[-1])[0][0]
+    # if max_ind == 0:
+    #     max_ind = np.argwhere(fourier == sorted_fourier[-2])[0][0]
+    # max_freq = np.abs(fft_freqs[max_ind])
+    # max_phase = fft_phases[max_ind]
+
     fourier = np.fft.fft(ydata)
     fft_freqs = np.fft.fftfreq(len(ydata), d=xdata[1] - xdata[0])
     fft_phases = np.angle(fourier)
-    sorted_fourier = np.sort(fourier)
-    max_ind = np.argwhere(fourier == sorted_fourier[-1])[0][0]
-    if max_ind == 0:
-        max_ind = np.argwhere(fourier == sorted_fourier[-2])[0][0]
-    max_freq = np.abs(fft_freqs[max_ind])
-    max_phase = fft_phases[max_ind]
+
+    half_N = len(ydata) // 2
+    mag = np.abs(fourier[1:half_N])
+    phase = fft_phases[1:half_N]
+    freqs = fft_freqs[1:half_N]
+
+    max_ind = np.argmax(mag)
+    max_freq = freqs[max_ind]
+    max_phase = phase[max_ind]
     if fitparams[0] is None:
         fitparams[0] = (max(ydata) - min(ydata)) / 2
     if fitparams[1] is None:
@@ -591,10 +666,20 @@ def fitdecaysin(xdata, ydata, fitparams=None):
     if fitparams[4] is None:
         fitparams[4] = np.mean(ydata)
     bounds = (
-        [0.75 * fitparams[0], 0.1 / (max(xdata) - min(xdata)), -
-         360, 0.3 * (max(xdata) - min(xdata)), np.min(ydata)],
-        [1.25 * fitparams[0], 30 /
-            (max(xdata) - min(xdata)), 360, np.inf, np.max(ydata)],
+        [
+            0.75 * fitparams[0],
+            0.1 / (max(xdata) - min(xdata)),
+            -360,
+            0.3 * (max(xdata) - min(xdata)),
+            np.min(ydata),
+        ],
+        [
+            1.25 * fitparams[0],
+            30 / (max(xdata) - min(xdata)),
+            360,
+            np.inf,
+            np.max(ydata),
+        ],
     )
     for i, param in enumerate(fitparams):
         if not (bounds[0][i] < param < bounds[1][i]):
@@ -606,7 +691,8 @@ def fitdecaysin(xdata, ydata, fitparams=None):
     pCov = np.full(shape=(len(fitparams), len(fitparams)), fill_value=np.inf)
     try:
         pOpt, pCov = sp.optimize.curve_fit(
-            decaysin, xdata, ydata, p0=fitparams, bounds=bounds)
+            decaysin, xdata, ydata, p0=fitparams, bounds=bounds
+        )
         # return pOpt, pCov
     except RuntimeError:
         print("Warning: fit failed!")
@@ -615,6 +701,7 @@ def fitdecaysin(xdata, ydata, fitparams=None):
 
 
 # ====================================================== #
+
 
 def twofreq_decaysin(x, *p):
     yscale0, freq0, phase_deg0, decay0, yscale1, freq1, phase_deg1, y0 = p
@@ -666,7 +753,16 @@ def fittwofreq_decaysin(xdata, ydata, fitparams=None):
             -360,
             np.min(ydata),
         ],
-        [1.25 * fitparams[0], 30 / (max(xdata) - min(xdata)), 360, np.inf, 0.5, 10, 360, np.max(ydata)],
+        [
+            1.25 * fitparams[0],
+            30 / (max(xdata) - min(xdata)),
+            360,
+            np.inf,
+            0.5,
+            10,
+            360,
+            np.max(ydata),
+        ],
     )
     for i, param in enumerate(fitparams):
         if not (bounds[0][i] < param < bounds[1][i]):
@@ -677,7 +773,9 @@ def fittwofreq_decaysin(xdata, ydata, fitparams=None):
     pOpt = fitparams
     pCov = np.full(shape=(len(fitparams), len(fitparams)), fill_value=np.inf)
     try:
-        pOpt, pCov = sp.optimize.curve_fit(twofreq_decaysin, xdata, ydata, p0=fitparams, bounds=bounds)
+        pOpt, pCov = sp.optimize.curve_fit(
+            twofreq_decaysin, xdata, ydata, p0=fitparams, bounds=bounds
+        )
         # return pOpt, pCov
     except (RuntimeError, ValueError) as e:
         print("Warning: fit failed with error:", e)
@@ -686,7 +784,22 @@ def fittwofreq_decaysin(xdata, ydata, fitparams=None):
 
 
 def threefreq_decaysin(x, *p):
-    yscale0, freq0, phase_deg0, decay0, y00, x00, yscale1, freq1, phase_deg1, y01, yscale2, freq2, phase_deg2, y02 = p
+    (
+        yscale0,
+        freq0,
+        phase_deg0,
+        decay0,
+        y00,
+        x00,
+        yscale1,
+        freq1,
+        phase_deg1,
+        y01,
+        yscale2,
+        freq2,
+        phase_deg2,
+        y02,
+    ) = p
     p0 = [yscale0, freq0, phase_deg0, decay0, 0]
     p1 = [yscale1, freq1, phase_deg1, y01]
     p2 = [yscale2, freq2, phase_deg2, y02]
@@ -780,7 +893,8 @@ def fitthreefreq_decaysin(xdata, ydata, fitparams=None):
     pCov = np.full(shape=(len(fitparams), len(fitparams)), fill_value=np.inf)
     try:
         pOpt, pCov = sp.optimize.curve_fit(
-            threefreq_decaysin, xdata, ydata, p0=fitparams, bounds=bounds)
+            threefreq_decaysin, xdata, ydata, p0=fitparams, bounds=bounds
+        )
         # return pOpt, pCov
     except RuntimeError:
         print("Warning: fit failed!")
@@ -849,8 +963,14 @@ def fithanger(xdata, ydata, fitparams=None):
     #     [np.max(xdata), 1e9, 1e9, 2*np.pi, (max(np.abs(ydata))-min(np.abs(ydata)))*10, np.max(np.abs(ydata))]
     #     )
     bounds = (
-        [np.min(xdata), 0, 0, -2 * np.pi, -1.5 *
-         abs((ydata[-1] - ydata[0]) / (xdata[-1] - xdata[0])), -np.inf],
+        [
+            np.min(xdata),
+            0,
+            0,
+            -2 * np.pi,
+            -1.5 * abs((ydata[-1] - ydata[0]) / (xdata[-1] - xdata[0])),
+            -np.inf,
+        ],
         [
             np.max(xdata),
             1e9,
@@ -872,7 +992,8 @@ def fithanger(xdata, ydata, fitparams=None):
     pCov = np.full(shape=(len(fitparams), len(fitparams)), fill_value=np.inf)
     try:
         pOpt, pCov = sp.optimize.curve_fit(
-            hangerS21func_sloped, xdata, ydata, p0=fitparams, bounds=bounds)
+            hangerS21func_sloped, xdata, ydata, p0=fitparams, bounds=bounds
+        )
         print("popt", pOpt)
         # return pOpt, pCov
     except RuntimeError:
@@ -882,6 +1003,7 @@ def fithanger(xdata, ydata, fitparams=None):
 
 
 # ====================================================== #
+
 
 # Standard RB decay fit function
 def rb_func(depth, p, a, offset):
@@ -907,8 +1029,10 @@ def rb_gate_fidelity(p_rb, p_irb, d, p_rb_err=None, p_irb_err=None):
         # fid_err = np.sqrt(fid_err_sqrd)
 
         fid_err1 = (d - 1) * (np.abs(p_rb - p_irb / p_rb) + (1 - p_rb)) / d
-        fid_err2 = 2 * (d**2 - 1) * (1 - p_rb) / (p_rb * d**2) + \
-            4 * np.sqrt(1 - p_rb) * np.sqrt(d**2 - 1) / p_rb
+        fid_err2 = (
+            2 * (d**2 - 1) * (1 - p_rb) / (p_rb * d**2)
+            + 4 * np.sqrt(1 - p_rb) * np.sqrt(d**2 - 1) / p_rb
+        )
         return fid, np.min((fid_err1, fid_err2))
     return fid
 
@@ -924,8 +1048,7 @@ def fitrb(xdata, ydata, fitparams=None):
         fitparams[1] = np.max(ydata) - np.min(ydata)
     if fitparams[2] is None:
         fitparams[2] = np.min(ydata)
-    bounds = ([0, -np.inf, -np.inf], 
-              [1, np.inf, np.inf])
+    bounds = ([0, -np.inf, -np.inf], [1, np.inf, np.inf])
     for i, param in enumerate(fitparams):
         if not (bounds[0][i] < param < bounds[1][i]):
             fitparams[i] = np.mean((bounds[0][i], bounds[1][i]))
@@ -936,7 +1059,8 @@ def fitrb(xdata, ydata, fitparams=None):
     pCov = np.full(shape=(len(fitparams), len(fitparams)), fill_value=np.inf)
     try:
         pOpt, pCov = sp.optimize.curve_fit(
-            rb_func, xdata, ydata, p0=fitparams, bounds=bounds)
+            rb_func, xdata, ydata, p0=fitparams, bounds=bounds
+        )
         # print(pOpt)s
         # print(pCov[0][0], pCov[1][1], pCov[2][2])
         # return pOpt, pCov
@@ -968,8 +1092,7 @@ def rb_decay_l1_l2(depth, p1, a0, b0, c0, p2):
 def rb_fidelity_l1_l2(d, p2, l1, p2_err=None, l1_err=None):  # d = dim of subspace
     fid = (1 / d) * ((d - 1) * p2 + 1 - l1)
     if p2_err is not None and l1_err is not None:
-        fid_err_sqrd = ((1 / d) * (d - 1) * p2_err) ** 2 + \
-            ((1 / d) * l1_err) ** 2
+        fid_err_sqrd = ((1 / d) * (d - 1) * p2_err) ** 2 + ((1 / d) * l1_err) ** 2
         fid_err = np.sqrt(fid_err_sqrd)
         return fid, fid_err
     return fid
@@ -1000,8 +1123,7 @@ def fitrb_l1_l2(xdata, ydata, p1, offset, fitparams=None):
     pCov = np.full(shape=(len(fitparams), len(fitparams)), fill_value=np.inf)
     try:
         pOpt, pCov = sp.optimize.curve_fit(
-            lambda depth, a0, b0, c0, p2: rb_decay_l1_l2(
-                depth, p1, a0, b0, c0, p2),
+            lambda depth, a0, b0, c0, p2: rb_decay_l1_l2(depth, p1, a0, b0, c0, p2),
             xdata,
             ydata,
             p0=fitparams,
@@ -1061,7 +1183,9 @@ def probg_X(n, *p):
 def probg_Xhalf_decay(n, *p):
     a, delta, decay = p
     delta = delta * np.pi / 180
-    return a + (0.5 * (-1) ** n * np.cos(np.pi / 2 + 2 * n * delta)) * np.exp(-n / decay)
+    return a + (0.5 * (-1) ** n * np.cos(np.pi / 2 + 2 * n * delta)) * np.exp(
+        -n / decay
+    )
 
 
 def fit_probg_Xhalf(xdata, ydata, fitparams=None):
@@ -1087,7 +1211,8 @@ def fit_probg_Xhalf(xdata, ydata, fitparams=None):
     pCov = np.full(shape=(len(fitparams), len(fitparams)), fill_value=np.inf)
     try:
         pOpt, pCov = sp.optimize.curve_fit(
-            probg_Xhalf, xdata, ydata, p0=fitparams, bounds=bounds)
+            probg_Xhalf, xdata, ydata, p0=fitparams, bounds=bounds
+        )
         # return pOpt, pCov
     except RuntimeError:
         print("Warning: fit failed!")
@@ -1118,7 +1243,8 @@ def fit_probg_X(xdata, ydata, fitparams=None):
     pCov = np.full(shape=(len(fitparams), len(fitparams)), fill_value=np.inf)
     try:
         pOpt, pCov = sp.optimize.curve_fit(
-            probg_X, xdata, ydata, p0=fitparams, bounds=bounds)
+            probg_X, xdata, ydata, p0=fitparams, bounds=bounds
+        )
         # return pOpt, pCov
     except RuntimeError:
         print("Warning: fit failed!")
@@ -1151,7 +1277,8 @@ def fit_probg_Xhalf_decay(xdata, ydata, fitparams=None):
     pCov = np.full(shape=(len(fitparams), len(fitparams)), fill_value=np.inf)
     try:
         pOpt, pCov = sp.optimize.curve_fit(
-            probg_Xhalf_decay, xdata, ydata, p0=fitparams, bounds=bounds)
+            probg_Xhalf_decay, xdata, ydata, p0=fitparams, bounds=bounds
+        )
         # return pOpt, pCov
     except RuntimeError:
         print("Warning: fit failed!")
@@ -1186,7 +1313,8 @@ def fit_poisson(xdata, ydata, fitparams=None):
     pCov = np.full(shape=(len(fitparams), len(fitparams)), fill_value=np.inf)
     try:
         pOpt, pCov = sp.optimize.curve_fit(
-            poisson, xdata, ydata, p0=fitparams, bounds=bounds)
+            poisson, xdata, ydata, p0=fitparams, bounds=bounds
+        )
         # return pOpt, pCov
     except RuntimeError:
         print("Warning: fit failed!")

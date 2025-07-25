@@ -156,6 +156,7 @@ with col_spacer:
     )
 st.session_state.config.update({"res_gain_ge": res_gain})
 
+
 with col_right:
     st.header("Optional Parameters")
 
@@ -210,6 +211,9 @@ if st.button("Run"):
     )
     st.session_state.onetone.run(py_avg=pyavg, fit=st.session_state.fit_checkbox)
     st.success("Experiment completed!")
+
+    ## update the variable in config bar
+    sync_param_to_config("res_gain_ge", res_gain, target_cfg_group="readout_cfg")
 
 # ---------- Plot Result ---------- #
 if (

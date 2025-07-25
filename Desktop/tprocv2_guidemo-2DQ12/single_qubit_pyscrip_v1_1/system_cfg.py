@@ -6,21 +6,22 @@ import Pyro4
 Pyro4.config.SERIALIZER = "pickle"
 Pyro4.config.PICKLE_PROTOCOL_VERSION = 4
 
-ns_host = "192.168.10.113"
+ns_host = "192.168.2.99"
 ns_port = 8888
 proxy_name = "myqick"
 
 soc, soccfg = make_proxy(ns_host=ns_host, ns_port=ns_port, proxy_name=proxy_name)
 print(soccfg)
 # Where do you want to save data
-DATA_PATH = r"C:\Users\QEL\Desktop\2DQ12\yokotest"
+DATA_PATH = r"C:\Users\QEL\Desktop\2DQ12\Loop"
 
 QubitIndex = 0
 
 hw_cfg = {
     # DAC
     "res_ch": [0] * 6,  # Single Tone Readout Port, Full-speed DAC
-    "qubit_ch": [14, 2, 2, 11, 2, 2],  # Qubit Channel Port, Full-speed DAC
+    "qubit_ch": [5, 2, 2, 11, 2, 2],  # Qubit Channel Port, Full-speed DAC
+    # "qubit_ch": [14, 7, 5, 11, 2, 2],  # Qubit Channel Port, Full-speed DAC
     "qubit_ch_ef": [2] * 6,  # Qubit ef Channel, Full-speed DAC
     "mux_ch": 12,
     "nqz_qubit": 2,
@@ -44,6 +45,7 @@ readout_cfg = {
     "res_gain_ef": [0.05, 0.05, 0.05, 0.05, 0.05, 0.05],  # [DAC units]
     "res_length": 5.0,  # [us] (1.0 for res spec)
     "res_phase": [0, 0, 0, 0, 0, 0],  # Rotation Angle From QICK Function
+    "res_sigma": 0.004,
     # Threshold for Distinguish g/e, from QICK Function
     "threshold": [0, 0, 0, 0, 0, 0],
 }
@@ -72,6 +74,19 @@ qubit_cfg = {
     "ramsey_freq": 2,  # [MHz]
 }
 
+cool_cfg = {
+    "cool_ch1": 0,  # Cool Channel 1
+    "cool_ch2": 1,  # Cool Channel 2
+    "nqz_cool_ch1": 2,  # Number of Quantization Zones for Cool Channel 1
+    "nqz_cool_ch2": 2,  # Number of Quantization Zones for Cool Channel 2
+    "cool_mixer1": 4000,  # [MHz] Mixer Frequency for Cool Channel 1
+    "cool_mixer2": 4000,  # [MHz] Mixer Frequency for Cool Channel 2
+    "cool_length": 5.0,  # [us] Length of the Cool Pulse
+    "cool_freq_1": 4000,  # [MHz] Frequency for Cool Channel 1
+    "cool_freq_2": 4000,  # [MHz] Frequency for Cool Channel 2
+    "cool_gain_1": 0.001,  # Gain for Cool Channel 1
+    "cool_gain_2": 0.001,  # Gain for Cool Channel 2
+}
 
 expt_cfg = {
     "reps": 100,

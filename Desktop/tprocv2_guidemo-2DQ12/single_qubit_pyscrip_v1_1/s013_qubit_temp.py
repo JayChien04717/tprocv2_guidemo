@@ -225,7 +225,7 @@ class Qubit_temperature:
             ax.set_title(f"average: {avg + 1} / {py_avg}")
             ax.set_xlabel("Gain (Dac unit)")
             ax.set_ylabel("Signal (ADC unit)")
-            ax.grid(True)
+
             clear_output(wait=True)
             display(fig)
 

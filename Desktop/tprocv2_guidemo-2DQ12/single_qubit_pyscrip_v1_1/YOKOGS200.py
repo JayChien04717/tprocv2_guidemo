@@ -5,7 +5,7 @@ import time
 
 
 class YOKOGS200:
-    _rampstep = 1e-7  # 0.0001 #0.001 # increment step when setting voltage/current
+    _rampstep = 1e-4  # 0.0001 #0.001 # increment step when setting voltage/current
     _rampinterval = 0.01  # dwell time for each voltage step # Default MATLAB is 0.01, CANNOT be lower than 0.001 otherwise fridge heats up
 
     # Initializes session for device.
@@ -32,10 +32,10 @@ class YOKOGS200:
 
     # Ramp up the voltage (volts) in increments of _rampstep, waiting _rampinterval
     # between each increment.
-    def SetVoltage(self, voltage):
+    def SetVoltage(self, voltage, _rampstep=1e-4):
         start = self.GetVoltage()
         stop = voltage
-        steps = max(1, round(abs(stop - start) / self._rampstep))
+        steps = max(1, round(abs(stop - start) / _rampstep))
         tempvolts = np.linspace(start, stop, num=steps + 1, endpoint=True)
         # print(tempvolts)
         self.OutputOn()
@@ -45,10 +45,10 @@ class YOKOGS200:
 
     # Ramp up the current (amps) in increments of _rampstep, waiting _rampinterval
     # between each increment.
-    def SetCurrent(self, current):
+    def SetCurrent(self, current, _rampstep=1e-7):
         start = self.GetCurrent()
         stop = current
-        steps = max(1, round(abs(stop - start) / self._rampstep))
+        steps = max(1, round(abs(stop - start) / _rampstep))
         tempcurrents = np.linspace(start, stop, num=steps)
         self.OutputOn()
         for tempcurrent in tempcurrents:
