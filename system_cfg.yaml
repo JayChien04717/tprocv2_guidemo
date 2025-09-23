@@ -1,0 +1,42 @@
+hw_cfg:
+  res_ch: [0, 0, 0, 0, 0, 0]
+  qubit_ch: [14, 2, 2, 7, 2, 2]
+  qubit_ch_ef: [2, 2, 2, 2, 2, 2]
+  mux_ch: 12
+  nqz_qubit: 2
+  nqz_res: 2
+  ro_ch: [0, 0, 0, 0, 0, 0]
+  mux_ro_chs: [2, 3, 4, 5, 6, 7]
+
+readout_cfg:
+  trig_time: 0.5
+  ro_length: 5.0
+  mixer_freq: 5600
+  res_freq_ge: [5352.79, 5494.19, 5667.69, 5796.46, 5917.51, 6051.89]
+  res_gain_ge: [0.1, 0.1, 0.1, 0.1, 0.1, 0.1]
+  res_freq_ef: [5000, 5100, 5200, 5300, 5400, 5500]
+  res_gain_ef: [0.05, 0.05, 0.05, 0.05, 0.05, 0.05]
+  res_length: 5.0
+  res_phase: [0, 0, 0, 0, 0, 0]
+  threshold: [0, 0, 0, 0, 0, 0]
+
+qubit_cfg:
+  qubit_freq_ge: [4000, 4000, 4000, 4000, 4000, 4000]
+  qubit_gain_ge: [0.1, 0.1, 0.1, 0.1, 0.1]
+  qubit_length_ge: 5
+  qubit_pi_gain_ge: [0.1, 0.1, 0.1, 0.1, 0.1]
+  qubit_pi2_gain_ge: [0.1, 0.1, 0.1, 0.1, 0.1]
+  qubit_freq_ef: [4000, 4000, 4000, 4000, 4000, 4000]
+  qubit_gain_ef: [0.0891, 0.086, 0.03, 0.03, 0.03, 0.1]
+  qubit_length_ef: 25.0
+  qmixer_freq: [4000, 4000, 4000, 4000, 4000, 4000]
+  qubit_phase: 0
+  sigma: [0.02, 0.02, 0.02, 0.02, 0.02, 0.02]
+  sigma_ef: [0.02, 0.02, 0.02, 0.02, 0.02, 0.02]
+  ramsey_freq: 2
+
+expt_cfg:
+  reps: 100
+  soft_avgs: 2000
+  relax_delay: 10
+  py_avg: 100

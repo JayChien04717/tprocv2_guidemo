@@ -1,0 +1,195 @@
+# ----- Qick package ----- #
+from qick import *
+from qick.pyro import make_proxy
+from qick.asm_v2 import AveragerProgramV2
+from qick.asm_v2 import QickSpan, QickSweep1D
+
+# ----- Library ----- #
+import matplotlib.pyplot as plt
+import numpy as np
+import plotly.graph_objects as go
+from IPython.display import display
+from .async_fun import asyn_run
+
+# ----- User Library ----- #
+from .system_cfg import *
+from .system_cfg import DATA_PATH
+from .system_tool import get_next_filename_labber, hdf5_generator
+from .module_fitzcu import resonator_circlefit, resonator_analyze, post_rotate
+from .fitting import fit_asym_lor, asym_lorfunc
+from .yamltool import yml_comment
+from IPython.display import display, clear_output
+
+##################
+# Define Program #
+##################
+
+
+class SingleToneSpectroscopyProgram(AveragerProgramV2):
+    def _initialize(self, cfg):
+        ro_ch = cfg["ro_ch"]
+        res_ch = cfg["res_ch"]
+
+        if soccfg['gens'][res_ch]['type']=='axis_sg_int4_v2':
+            self.declare_gen(ch=res_ch, nqz=2, mixer_freq=cfg['res_freq_ge_mixer'], ro_ch=ro_ch)
+        else:
+            self.declare_gen(ch=res_ch, nqz=2, ro_ch=ro_ch)
+
+        self.declare_readout(ch=ro_ch, length=cfg["ro_length"])
+
+        self.add_loop("freqloop", cfg["steps"])
+        self.add_readoutconfig(
+            ch=ro_ch, name="myro", freq=cfg["res_freq_ge"], gen_ch=res_ch
+        )
+        self.add_gauss(
+            ch=res_ch,
+            name="readout",
+            sigma=cfg["res_sigma"],
+            length=5 * cfg["res_sigma"],
+            even_length=True,
+        )
+        self.add_pulse(
+            ch=res_ch,
+            name="res_pulse",
+            ro_ch=ro_ch,
+            style="flat_top",
+            envelope="readout",
+            length=cfg["res_length"],
+            freq=cfg["res_freq_ge"],
+            phase=cfg["res_phase"],
+            gain=cfg["res_gain_ge"],
+        )
+
+    def apply_cool(self, cfg):
+        cool_ch1 = cfg["cool_ch1"]
+        cool_ch2 = cfg["cool_ch2"]
+        if self.soccfg["gens"][cool_ch1]["type"] == "axis_sg_int4_v2":
+            self.declare_gen(
+                ch=cool_ch1, nqz=cfg["nqz_cool_ch1"], mixer_freq=cfg["cool_mixer1"]
+            )
+        else:
+            self.declare_gen(ch=cool_ch1, nqz=cfg["nqz_cool_ch1"])
+
+        if self.soccfg["gens"][cool_ch2]["type"] == "axis_sg_int4_v2":
+            self.declare_gen(
+                ch=cool_ch2, nqz=cfg["nqz_cool_ch2"], mixer_freq=cfg["cool_mixer2"]
+            )
+        else:
+            self.declare_gen(ch=cool_ch2, nqz=cfg["nqz_cool_ch2"])
+        self.add_gauss(
+            ch=cool_ch1,
+            name="cool1",
+            sigma=cfg["res_sigma"],
+            length=5 * cfg["res_sigma"],
+            even_length=True,
+        )
+        self.add_pulse(
+            ch=cool_ch1,
+            name="cool_pulse1",
+            style="flat_top",
+            envelope="cool1",
+            length=cfg["cool_length"],
+            freq=cfg["cool_freq_1"],
+            phase=0,
+            gain=cfg["cool_gain_1"],
+        )
+        self.add_gauss(
+            ch=cool_ch2,
+            name="cool2",
+            sigma=cfg["res_sigma"],
+            length=5 * cfg["res_sigma"],
+            even_length=True,
+        )
+        self.add_pulse(
+            ch=cool_ch2,
+            name="cool_pulse2",
+            style="flat_top",
+            envelope="cool2",
+            length=cfg["cool_length"],
+            freq=cfg["cool_freq_2"],
+            phase=0,
+            gain=cfg["cool_gain_2"],
+        )
+
+    def _body(self, cfg):
+        self.send_readoutconfig(ch=cfg["ro_ch"], name="myro", t=0)
+        if cfg["cooling"] is True:
+            self.apply_cool(cfg)
+            self.pulse(ch=self.cfg["cool_ch1"], name="cool_pulse1", t=0)
+            self.pulse(ch=self.cfg["cool_ch2"], name="cool_pulse2", t=0)
+            self.delay_auto(0.05, tag="Ring down")
+        self.pulse(ch=cfg["res_ch"], name="res_pulse", t=0)
+        self.trigger(ros=[cfg["ro_ch"]], pins=[0], t=cfg["trig_time"])
+
+
+class Resonator_onetone:
+    def __init__(self, soc, soccfg, config):
+        self.soc = soc
+        self.soccfg = soccfg
+        self.cfg = config
+
+    def run(self, py_avg, liveplot=False, solve_type="hm"):
+        if liveplot:
+            return self.liveplot(py_avg, solve_type=solve_type)
+
+        else:
+            prog = SingleToneSpectroscopyProgram(
+                self.soccfg,
+                reps=self.cfg["reps"],
+                final_delay=self.cfg["relax_delay"],
+                cfg=self.cfg,
+            )
+
+            iq_list = prog.acquire(self.soc, rounds=py_avg, progress=True)
+            self.iqdata = iq_list[0][0].dot([1, 1j])
+            self.freqs = prog.get_pulse_param("res_pulse", "freq", as_array=True)
+
+    def plot(self):
+        param = resonator_analyze(self.freqs, self.iqdata)
+        return param
+
+    def plot_circle(self):
+        param = resonator_circlefit(self.freqs, self.iqdata)
+        return param
+
+    async def liveplot(self, py_avg=1, solve_type='hm'):
+        prog = SingleToneSpectroscopyProgram(
+            self.soccfg, reps=1, final_delay=self.cfg["relax_delay"], cfg=self.cfg
+        )
+
+        self.freqs = prog.get_pulse_param("res_pulse", "freq", as_array=True)
+
+
+        figw = go.FigureWidget(
+            data=[go.Scatter(x=self.freqs, y=np.zeros_like(self.freqs), mode="lines+markers", name="|IQ|")]
+        )
+        figw.update_layout(
+            title="Resonator OneTone",
+            xaxis_title="Frequency (MHz)",
+            yaxis_title="ADC unit"
+        )
+        display(figw)
+
+
+        self.iqdata = await asyn_run(prog, soc, py_avg, figw, title="Resonator OneTone", mode="1D")
+        param = resonator_circlefit(self.freqs, self.iqdata, solve_type=solve_type)
+        return param
+
+    def saveLabber(self, qb_idx, yoko_value=None):
+        expt_name = "s002_onetone" + f"_Q{qb_idx}"
+        file_path = get_next_filename_labber(DATA_PATH, expt_name, yoko_value)
+        try:
+            self.cfg.pop("res_freq_ge")
+        except:
+            pass
+
+        dict_val = yml_comment(self.cfg)
+
+        hdf5_generator(
+            filepath=file_path,
+            x_info={"name": "Frequency", "unit": "Hz", "values": self.freqs * 1e6},
+            z_info={"name": "Signal", "unit": "ADC unit", "values": self.iqdata},
+            comment=(f"{dict_val}"),
+            tag="OneTone",
+        )
+        print(f"Data save to {file_path}")
