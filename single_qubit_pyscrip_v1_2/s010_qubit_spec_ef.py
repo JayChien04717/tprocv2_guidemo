@@ -13,9 +13,8 @@ from .system_cfg import *
 from .system_cfg import DATA_PATH
 from .system_tool import get_next_filename_labber, hdf5_generator
 from tqdm.auto import tqdm
-from .module_fitzcu import spectrum_analyze
-from .fitting import fitlor, lorfunc
-from .plot_utils import plot_final2
+from .module_fitzcu import spectrum_analyze, post_rotate
+from .fitting import *
 from .yamltool import yml_comment
 from IPython.display import display, clear_output
 
@@ -207,7 +206,7 @@ class Qubit_Twotone_ef:
             self.iqdata = iq / (i + 1)
 
             ax.cla()
-            ax.plot(self.freqs, np.abs(self.iqdata), **marker_style)
+            ax.plot(self.freqs, np.abs(post_rotate(self.iqdata)), **marker_style)
             ax.set_title(f"average: {i + 1} / {py_avg}")
             ax.set_xlabel("Frequency (MHz)")
             ax.set_ylabel("ADC unist")
@@ -215,16 +214,15 @@ class Qubit_Twotone_ef:
             clear_output(wait=True)
             display(fig)
         clear_output(wait=True)
-        plt.close(fig)
-        ### Final plot ###
-        fit_params, error, fig = plot_final2(
-            self.freqs, self.iqdata, "Frequency(MHz)", fitlor, lorfunc
-        )
-        fig.suptitle(f"Qubit ef Spectrum, Qubit freq = {fit_params[2]:.6f} MHz")
-        fig.tight_layout()
-        resonance_freq = fit_params[2]
+        ax.set_title(f"Qubit ef Spectrum")
+        ax.plot(self.freqs, np.abs(post_rotate(self.iqdata)), **marker_style)
+        pOpt, _ = fitlor(self.freqs, np.abs(post_rotate(self.iqdata)))
+        res = pOpt[2]  # Extract resonance frequency
 
-        return round(resonance_freq, 6)
+        ax.plot(self.freqs, lorfunc(self.freqs, *pOpt), label="Fit")
+        ax.axvline(res, color="r", ls="--", label=f"$f_{{res}}$ = {res:.2f} MHz")
+        ax.legend()
+        return round(res, 4)
 
     def saveLabber(self, qb_idx, yoko_value=None):
         expt_name = "s010_qubit_spec_ef" + f"_Q{qb_idx}"

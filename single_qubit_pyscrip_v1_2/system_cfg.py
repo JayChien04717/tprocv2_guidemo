@@ -6,8 +6,8 @@ import Pyro4
 Pyro4.config.SERIALIZER = "pickle"
 Pyro4.config.PICKLE_PROTOCOL_VERSION = 4
 
-ns_host = "192.168.10.35"
-ns_port = 8886
+ns_host = "192.168.10.82"
+ns_port = 8888
 proxy_name = "myqick"
 
 soc, soccfg = make_proxy(ns_host=ns_host, ns_port=ns_port, proxy_name=proxy_name)
